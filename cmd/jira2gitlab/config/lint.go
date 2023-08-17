@@ -42,5 +42,6 @@ func runConfigLint(o *Options) error {
 	// Semantic Validation - 의미 검사
 	// TODO: Semantic Validation
 
+	log.Info("Config file is valid")
 	return nil
 }
