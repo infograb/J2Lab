@@ -1,0 +1,18 @@
+# Path: internal/config/sample.yaml
+
+gitlab:
+  host: "https://gitlab.com"
+  token: token
+
+jira:
+  host: "https://jira.com"
+  token: token
+  jql: ""
+
+project:
+  SSP: ssp_gitlab
+
+user:
+  jeff@infograb.net: infograb_jeff
+  kane@infograb.net: infograb_unkonwn
+  dexter@infograb.net: infograb_unkonwn
