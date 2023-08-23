@@ -27,6 +27,19 @@ type Config struct {
 		Host  string `yaml:"host"`
 		Token string `yaml:"token"`
 	} `yaml:"jira"`
+
+	Project map[string]string `yaml:"project"`
+	User    map[string]string `yaml:"user"`
+}
+
+func GetConfig() *Config {
+	var cfg Config
+	err := viper.Unmarshal(&cfg)
+	if err != nil {
+		log.Fatalf("Error unmarshalling config: %s", err)
+	}
+
+	return &cfg
 }
 
 // config file is read by yaml format
