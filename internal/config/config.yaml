@@ -6,6 +6,7 @@ gitlab:
 
 jira:
   host: "https://jira.com"
+  username: username
   token: token
   jql: ""
 
