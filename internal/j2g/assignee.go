@@ -8,10 +8,15 @@ import (
 )
 
 func convertJiraUserToGitLabUser(gl *gitlab.Client, jiraUser *jira.User) (*gitlab.User, error) {
-	config := config.GetConfig()
+	if jiraUser == nil {
+		return nil, nil
+	}
+
+	cfg := config.GetConfig()
 
 	jiraUserEmail := jiraUser.EmailAddress
-	gitlabUserEmail := config.User[jiraUserEmail]
+	gitlabUserEmail := cfg.Users[jiraUserEmail]
+
 	users, _, err := gl.Users.ListUsers(&gitlab.ListUsersOptions{
 		Username: &gitlabUserEmail,
 	})

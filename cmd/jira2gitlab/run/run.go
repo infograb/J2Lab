@@ -1,9 +1,8 @@
 package run
 
 import (
-	jira "github.com/andygrunwald/go-jira/v2/cloud"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/config"
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/j2g"
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/utils"
 )
@@ -43,15 +42,20 @@ func (o *Options) validate() error {
 }
 
 func (o *Options) run() error {
-	jiraIssue := &jira.Issue{
-		Key: "TEST-1",
-		Fields: &jira.IssueFields{
-			Summary:     "Test issue",
-			Description: "Test issue description",
-		},
-	}
+	// jiraIssue := &jira.Issue{
+	// 	Key: "TEST-1",
+	// 	Fields: &jira.IssueFields{
+	// 		Summary:     "Test issue",
+	// 		Description: "Test issue description",
+	// 	},
+	// }
 
-	gitlabIssue := j2g.ConvertJiraIssueToGitLabIssue(jiraIssue)
-	log.Debugf("GitLab issue: %+v", gitlabIssue)
+	// gitlabIssue := j2g.ConvertJiraIssueToGitLabIssue(jiraIssue)
+	// log.Debugf("GitLab issue: %+v", gitlabIssue)
+
+	gl := config.GetGitLabClient()
+	jr := config.GetJiraClient()
+	j2g.ConvertByProject(gl, jr)
+
 	return nil
 }

@@ -22,12 +22,12 @@ func createMilestoneFromJiraVersion(jr *jira.Client, gl *gitlab.Client, pid inte
 		log.Fatalf("Error getting jira fix version: %s", err)
 	}
 
-	jiraFixVersionStartDate, err := time.Parse(jiraFixVersion.StartDate, "2006-01-02")
+	jiraFixVersionStartDate, err := time.Parse("2006-01-02", jiraFixVersion.StartDate)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	jiraFixVersionReleaseDate, err := time.Parse(jiraFixVersion.ReleaseDate, "2006-01-02")
+	jiraFixVersionReleaseDate, err := time.Parse("2006-01-02", jiraFixVersion.StartDate)
 	if err != nil {
 		log.Fatal(err)
 	}

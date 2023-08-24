@@ -1,15 +1,28 @@
 package utils
 
-import (
-	"io"
-	"net/http"
-)
+// import (
+// 	"bytes"
+// 	"io"
+// 	"net/http"
 
-func DownloadFile(url string) (io.ReadCloser, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
+// 	log "github.com/sirupsen/logrus"
+// )
 
-	return resp.Body, nil
-}
+// func DownloadFile(url string) (*bytes.Reader, error) {
+// 	response, err := http.Get(url)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer response.Body.Close()
+
+// 	if response.StatusCode != http.StatusOK {
+// 		log.Fatalf("Error downloading file: %s", response.Status)
+// 	}
+
+// 	imageData, err := io.ReadAll(response.Body)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+
+// 	return bytes.NewReader(imageData), nil
+// }

@@ -1,12 +1,16 @@
 package config
 
 import (
+	"bufio"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 
 	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
@@ -29,11 +33,52 @@ type Config struct {
 		Token string `yaml:"token"`
 	} `yaml:"jira"`
 
-	Project map[string]string `yaml:"project"`
-	User    map[string]string `yaml:"user"`
+	Projects map[string]string `yaml:"projects"`
+	Users    map[string]string `yaml:"users"`
 }
 
 var cfg *Config
+
+func CapitalizeJiraProject(cfg *Config) {
+	for jiraProjectID, gitlabProjectPath := range cfg.Projects {
+		delete(cfg.Projects, jiraProjectID)
+
+		caser := cases.Upper(language.English)
+		cfg.Projects[caser.String(jiraProjectID)] = gitlabProjectPath
+	}
+}
+
+func parseUsers() map[string]string {
+	pwd, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Error getting home directory: %s", err)
+	}
+
+	file, err := os.Open(filepath.Join(pwd, "users.txt"))
+	if err != nil {
+		log.Fatalf("Error opening users file: %s", err)
+	}
+	defer file.Close()
+
+	userMap := make(map[string]string)
+
+	// Read the file line by line
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		parts := strings.Split(line, ":")
+		if len(parts) == 2 {
+			key := strings.TrimSpace(parts[0])
+			value := strings.TrimSpace(parts[1])
+			userMap[key] = value
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		log.Fatalf("Error reading users file: %s", err)
+	}
+
+	return userMap
+}
 
 func GetConfig() *Config {
 	if cfg != nil {
@@ -44,6 +89,9 @@ func GetConfig() *Config {
 	if err != nil {
 		log.Fatalf("Error unmarshalling config: %s", err)
 	}
+
+	cfg.Users = parseUsers()
+	CapitalizeJiraProject(cfg)
 
 	return cfg
 }
