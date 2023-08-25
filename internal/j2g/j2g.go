@@ -10,9 +10,32 @@ import (
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/config"
 )
 
+func paginateJiraIssues(jr *jira.Client, jql string, convertFunc func(*jira.Issue) interface{}) {
+	startIndex := 0
+	for {
+		issues, _, err := jr.Issue.Search(context.Background(), jql, &jira.SearchOptions{
+			StartAt: startIndex,
+			Fields:  []string{"*all"},
+		})
+		if err != nil {
+			log.Fatalf("Error getting Jira issues: %s", err)
+		}
+
+		if len(issues) == 0 {
+			break
+		}
+
+		for _, issue := range issues {
+			convertFunc(&issue)
+		}
+		startIndex += len(issues)
+	}
+}
+
 func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 	cfg := config.GetConfig()
 
+	//* Get Project Information
 	jiraProjectID := cfg.Project.Jira.Name
 	gitlabProjectPath := cfg.Project.GitLab.Issue
 
@@ -29,17 +52,12 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 	log.Infof("Jira project: %s", jiraProject.Name)
 	log.Infof("GitLab project: %s", gitlabProject.Name)
 
-	// 프로젝트 뽑을 때 같이 뽑히는 것들 (Jira)
-	// Version
-	// Component
-	// IssueType
-	// Description
-
-	//* Create Project Milestones
+	//* Project Milestones
 	for _, version := range jiraProject.Versions {
 		createMilestoneFromJiraVersion(jr, gl, gitlabProject.ID, &version)
 	}
 
+	//* Project Description
 	_, _, err = gl.Projects.EditProject(gitlabProjectPath, &gitlab.EditProjectOptions{
 		Description: gitlab.String(jiraProject.Description),
 	})
@@ -54,32 +72,27 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 		prefixJql = ""
 	}
 
-	jql := fmt.Sprintf("%s project=%s Order by key ASC", prefixJql, jiraProjectID)
+	var epics []*gitlab.Epic
+	var issues []*gitlab.Issue
 
-	startIndex := 0
-	for {
-		issues, _, err := jr.Issue.Search(context.Background(), jql, &jira.SearchOptions{
-			StartAt: startIndex,
-			Fields:  []string{"*all"},
-		})
-		if err != nil {
-			log.Fatalf("Error getting Jira issues: %s", err)
-		}
+	//* Epic
+	epicJql := fmt.Sprintf("%s project=%s AND type = Epic Order by key ASC", prefixJql, jiraProjectID)
+	paginateJiraIssues(jr, epicJql, func(jiraIssue *jira.Issue) interface{} {
+		log.Infof("Converting epic: %s", jiraIssue.Key)
+		epic := ConvertJiraIssueToGitLabEpic(gl, jr, jiraIssue)
+		epics = append(epics, epic)
+		return nil
+	},
+	)
 
-		if len(issues) == 0 {
-			break
-		}
+	//* Issue
+	issueJql := fmt.Sprintf("%s project=%s AND type != Epic Order by key ASC", prefixJql, jiraProjectID)
+	paginateJiraIssues(jr, issueJql, func(jiraIssue *jira.Issue) interface{} {
+		log.Infof("Converting issue: %s", jiraIssue.Key)
+		gitlabIssue := ConvertJiraIssueToGitLabIssue(gl, jr, jiraIssue)
+		issues = append(issues, gitlabIssue)
+		return nil
+	})
 
-		// TODO: API 호출 횟수를 줄이기 위해서는 위에서 뽑은 마일스톤을 issue 만드는 function에 주입해야 한다.
-		for _, issue := range issues {
-			log.Infof("Converting issue: %s", issue.Key)
-			ConvertJiraIssueToGitLabIssue(gl, jr, gitlabProjectPath, &issue)
-
-			break //!
-		}
-
-		break //!
-
-		startIndex += len(issues)
-	}
+	//* Link
 }

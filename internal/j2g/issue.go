@@ -24,8 +24,9 @@ func convertToGitLabComment(jiraComment *jira.Comment) *gitlab.CreateIssueNoteOp
 	}
 }
 
-func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, pid interface{}, jiraIssue *jira.Issue) *gitlab.Issue {
+func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue *jira.Issue) *gitlab.Issue {
 	cfg := config.GetConfig()
+	pid := cfg.Project.GitLab.Issue
 
 	// TODO: epic -> epic : GitLab 프로젝트는 반드시 상위 그룹이 있어야 한다.
 	//? 어느 부모에 에픽을 넣어야 하지?
@@ -39,7 +40,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, pid inter
 		// Weight: StoryPoint,
 		// MilestoneID: &fixMilestone.ID,
 		// EpicID: ,
-		Labels: convertJiraToGitLabLabels(gl, jr, pid, jiraIssue),
+		Labels: convertJiraToGitLabLabels(gl, jr, pid, jiraIssue, false),
 	}
 
 	//* Assignee
@@ -107,7 +108,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, pid inter
 		})
 	}
 
-	return nil
+	return gitlabIssue
 }
 
 // 이슈를 모두 만든 후 차례로 연결

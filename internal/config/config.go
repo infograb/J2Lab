@@ -38,7 +38,8 @@ type Config struct {
 			Name        string `yaml:"name" validate:"required"`
 			Jql         string `yaml:"jql"`
 			CustomField struct {
-				StoryPoint string `yaml:"story_point" mapstructure:"story_point"`
+				StoryPoint    string `yaml:"story_point" mapstructure:"story_point"`
+				EpicStartDate string `yaml:"epic_start_date" mapstructure:"epic_start_date"`
 			} `yaml:"custom_field" mapstructure:"custom_field"`
 		} `yaml:"jira"`
 		GitLab struct {
