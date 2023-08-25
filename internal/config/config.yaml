@@ -1,19 +1,21 @@
 # Path: internal/config/sample.yaml
 
 gitlab:
-  host: "https://gitlab.com"
-  token: token
+  host: https://gitlab.com
+  token: private-token
 
 jira:
-  host: "https://jira.com"
-  username: username
-  token: token
-  jql: ""
+  host: https://ig-cave.atlassian.net/
+  email: jeff@infograb.net
+  token: private-token
 
 project:
-  SSP: ssp_gitlab
-
-user:
-  jeff@infograb.net: infograb-jeff
-  kane@infograb.net: infograb_unkonwn
-  dexter@infograb.net: infograb_unkonwn
+  jira:
+    name: SSP
+    jql: ""
+    custom_field:
+      story_point: customfield_10035
+      epic_start_date: customfield_10015
+  gitlab:
+    issue: infograb/team/devops/toy/gos/poc/jeff
+    epic: infograb/team/devops/toy/gos/poc
