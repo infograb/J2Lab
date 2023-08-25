@@ -7,6 +7,7 @@ import (
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
 	log "github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
+	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/config"
 )
 
 // comment -> comments : GitLab 작성자는 API owner이지만, 텍스트로 Jira 작성자를 표현
@@ -24,6 +25,8 @@ func convertToGitLabComment(jiraComment *jira.Comment) *gitlab.CreateIssueNoteOp
 }
 
 func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, pid interface{}, jiraIssue *jira.Issue) *gitlab.Issue {
+	cfg := config.GetConfig()
+
 	// TODO: epic -> epic : GitLab 프로젝트는 반드시 상위 그룹이 있어야 한다.
 	//? 어느 부모에 에픽을 넣어야 하지?
 	// gitlabCreateIssueOptions.EpicID
@@ -54,6 +57,13 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, pid inter
 		}, false)
 
 		gitlabCreateIssueOptions.MilestoneID = &milestone.ID
+	}
+
+	//* Storypoint -> Weight (if custom field is provided)
+	if cfg.Project.Jira.CustomField.StoryPoint != "" {
+		storyPoint := jiraIssue.Fields.Unknowns[cfg.Project.Jira.CustomField.StoryPoint].(float64)
+		storyPointInt := int(storyPoint)
+		gitlabCreateIssueOptions.Weight = &storyPointInt
 	}
 
 	//* 이슈를 생성합니다.

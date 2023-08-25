@@ -25,21 +25,24 @@ type Config struct {
 	GitLab struct {
 		Host  string `yaml:"host" validate:"required,url"`
 		Token string `yaml:"token"`
-	} `yaml:"gitlab"`
+	} `yaml:"gitlab" validate:"required"`
 
 	Jira struct {
-		Host  string `yaml:"host"`
-		Email string `yaml:"email"`
+		Host  string `yaml:"host" validate:"required,url"`
+		Email string `yaml:"email" validate:"required,email"`
 		Token string `yaml:"token"`
 	} `yaml:"jira"`
 
 	Project struct {
 		Jira struct {
-			Name string `yaml:"name"`
-			Jql  string `yaml:"jql"`
+			Name        string `yaml:"name" validate:"required"`
+			Jql         string `yaml:"jql"`
+			CustomField struct {
+				StoryPoint string `yaml:"story_point" mapstructure:"story_point"`
+			} `yaml:"custom_field" mapstructure:"custom_field"`
 		} `yaml:"jira"`
 		GitLab struct {
-			Issue string `yaml:"issue"`
+			Issue string `yaml:"issue" validate:"required"`
 			Epic  string `yaml:"epic"`
 		} `yaml:"gitlab"`
 	} `yaml:"project"`

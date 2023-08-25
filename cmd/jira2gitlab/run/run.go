@@ -42,17 +42,6 @@ func (o *Options) validate() error {
 }
 
 func (o *Options) run() error {
-	// jiraIssue := &jira.Issue{
-	// 	Key: "TEST-1",
-	// 	Fields: &jira.IssueFields{
-	// 		Summary:     "Test issue",
-	// 		Description: "Test issue description",
-	// 	},
-	// }
-
-	// gitlabIssue := j2g.ConvertJiraIssueToGitLabIssue(jiraIssue)
-	// log.Debugf("GitLab issue: %+v", gitlabIssue)
-
 	gl := config.GetGitLabClient()
 	jr := config.GetJiraClient()
 	j2g.ConvertByProject(gl, jr)
