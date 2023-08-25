@@ -8,7 +8,38 @@ import (
 	gitlab "github.com/xanzy/go-gitlab"
 )
 
+func createOrRetrieveMiletone(gl *gitlab.Client, pid interface{}, option gitlab.CreateMilestoneOptions, closed bool) *gitlab.Milestone {
+	milestones, _, err := gl.Milestones.ListMilestones(pid, &gitlab.ListMilestonesOptions{
+		Title: option.Title,
+	})
+	if err != nil {
+		log.Fatalf("Error getting milestone: %s", err)
+	}
+
+	if len(milestones) > 0 {
+		return milestones[0]
+	}
+
+	milestone, _, err := gl.Milestones.CreateMilestone(pid, &option)
+	if err != nil {
+		log.Fatalf("Error creating milestone: %s", err)
+	}
+
+	if closed {
+		_, _, err := gl.Milestones.UpdateMilestone(pid, milestone.ID, &gitlab.UpdateMilestoneOptions{
+			StateEvent: gitlab.String("close"),
+		})
+		if err != nil {
+			log.Fatalf("Error closing milestone: %s", err)
+		}
+	}
+
+	return milestone
+}
+
 func createMilestoneFromJiraVersion(jr *jira.Client, gl *gitlab.Client, pid interface{}, jiraVersion *jira.Version) *gitlab.Milestone {
+	log.Infof("Creating milestone: %s", jiraVersion.Name)
+
 	var startDate time.Time
 	if jiraVersion.StartDate != "" {
 		parsedDate, err := time.Parse("2006-01-02", jiraVersion.StartDate)
@@ -27,28 +58,13 @@ func createMilestoneFromJiraVersion(jr *jira.Client, gl *gitlab.Client, pid inte
 		releaseDate = parsedDate
 	}
 
-	milestone, res, err := gl.Milestones.CreateMilestone(pid, &gitlab.CreateMilestoneOptions{
+	option := gitlab.CreateMilestoneOptions{
 		Title:       &jiraVersion.Name,
 		Description: &jiraVersion.Description,
 		StartDate:   (*gitlab.ISOTime)(&startDate),
 		DueDate:     (*gitlab.ISOTime)(&releaseDate),
-	})
-	if res.StatusCode == 400 {
-		log.Debugf("Milestone already exists: %s", jiraVersion.Name)
-		return nil
-	} else if err != nil {
-		log.Fatalf("Error creating milestone: %s", err)
 	}
-
-	// Closed Milestone if it is released or archived
-	if *jiraVersion.Archived || *jiraVersion.Released {
-		_, _, err := gl.Milestones.UpdateMilestone(pid, milestone.ID, &gitlab.UpdateMilestoneOptions{
-			StateEvent: gitlab.String("close"),
-		})
-		if err != nil {
-			log.Fatalf("Error closing milestone: %s", err)
-		}
-	}
+	milestone := createOrRetrieveMiletone(gl, pid, option, *jiraVersion.Archived || *jiraVersion.Released)
 
 	return milestone
 }

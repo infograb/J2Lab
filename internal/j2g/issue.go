@@ -54,6 +54,15 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, pid inter
 		gitlabCreateIssueOptions.AssigneeIDs = &[]int{assignee.ID}
 	}
 
+	//* Version -> Milestone
+	if len(jiraIssue.Fields.FixVersions) > 0 {
+		milestone := createOrRetrieveMiletone(gl, pid, gitlab.CreateMilestoneOptions{
+			Title: &jiraIssue.Fields.FixVersions[0].Name,
+		}, false)
+
+		gitlabCreateIssueOptions.MilestoneID = &milestone.ID
+	}
+
 	//* 이슈를 생성합니다.
 	gitlabIssue, gitlabResponse, err := gl.Issues.CreateIssue(pid, gitlabCreateIssueOptions)
 	if err != nil {

@@ -35,7 +35,7 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 		// IssueType
 		// Description
 
-		//* Version -> Milestone
+		//* Create Project Milestones
 		for _, version := range jiraProject.Versions {
 			createMilestoneFromJiraVersion(jr, gl, gitlabProject.ID, &version)
 		}
