@@ -26,11 +26,6 @@ func convertToGitLabComment(jiraComment *jira.Comment) *gitlab.CreateIssueNoteOp
 }
 
 func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, pid interface{}, jiraIssue *jira.Issue) *gitlab.Issue {
-	// 선처리 작업
-	// TODO: version -> milestone : 마일스톤을 만든 후 해당 ID를 매핑한다. //! 뭐지?
-	// fixVersion -> milestone
-	// fixMilestone := createMilestoneFromJiraVersion(jr, gl, pid, jiraIssue.Fields.FixVersions[0].ID)
-
 	// TODO: epic -> epic : GitLab 프로젝트는 반드시 상위 그룹이 있어야 한다.
 	//? 어느 부모에 에픽을 넣어야 하지?
 	// gitlabCreateIssueOptions.EpicID
@@ -64,9 +59,9 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, pid inter
 	}
 
 	//* 이슈를 생성합니다.
-	gitlabIssue, gitlabResponse, err := gl.Issues.CreateIssue(pid, gitlabCreateIssueOptions)
+	gitlabIssue, _, err := gl.Issues.CreateIssue(pid, gitlabCreateIssueOptions)
 	if err != nil {
-		fmt.Println(gitlabResponse)
+		log.Fatalf("Error creating GitLab issue: %s", err)
 	}
 
 	//* Comment -> Comment
@@ -74,7 +69,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, pid inter
 	for _, jiraComment := range jiraIssue.Fields.Comments.Comments {
 		_, _, err := gl.Notes.CreateIssueNote(pid, gitlabIssue.IID, convertToGitLabComment(jiraComment))
 		if err != nil {
-			fmt.Println(err)
+			log.Fatalf("Error creating GitLab comment: %s", err)
 		}
 	}
 
@@ -91,7 +86,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, pid inter
 			CreatedAt: &createdAt,
 		})
 		if err != nil {
-			fmt.Println(err)
+			log.Fatalf("Error creating GitLab comment: %s", err)
 		}
 	}
 

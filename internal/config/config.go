@@ -33,19 +33,26 @@ type Config struct {
 		Token string `yaml:"token"`
 	} `yaml:"jira"`
 
-	Projects map[string]string `yaml:"projects"`
-	Users    map[string]string `yaml:"users"`
+	Project struct {
+		Jira struct {
+			Name string `yaml:"name"`
+			Jql  string `yaml:"jql"`
+		} `yaml:"jira"`
+		GitLab struct {
+			Issue string `yaml:"issue"`
+			Epic  string `yaml:"epic"`
+		} `yaml:"gitlab"`
+	} `yaml:"project"`
+
+	Users map[string]string `yaml:"users"`
 }
 
 var cfg *Config
 
-func CapitalizeJiraProject(cfg *Config) {
-	for jiraProjectID, gitlabProjectPath := range cfg.Projects {
-		delete(cfg.Projects, jiraProjectID)
-
-		caser := cases.Upper(language.English)
-		cfg.Projects[caser.String(jiraProjectID)] = gitlabProjectPath
-	}
+func capitalizeJiraProject(cfg *Config) {
+	jiraProjectID := cfg.Project.Jira.Name
+	caser := cases.Upper(language.English)
+	cfg.Project.Jira.Name = caser.String(jiraProjectID)
 }
 
 func parseUsers() map[string]string {
@@ -91,7 +98,7 @@ func GetConfig() *Config {
 	}
 
 	cfg.Users = parseUsers()
-	CapitalizeJiraProject(cfg)
+	capitalizeJiraProject(cfg)
 
 	return cfg
 }
