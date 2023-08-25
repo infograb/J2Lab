@@ -11,7 +11,7 @@ import (
 )
 
 // Debug 모드에서는 오로지 한 번만 호출한다.
-func paginateJiraIssues(jr *jira.Client, jql string, convertFunc func(*jira.Issue), debug bool) {
+func paginateJiraIssues(jr *jira.Client, jql string, convertFunc func(*jira.Issue), debug bool) { // TODO Debug 모드 제거
 	startIndex := 0
 	for {
 		issues, _, err := jr.Issue.Search(context.Background(), jql, &jira.SearchOptions{
@@ -82,8 +82,7 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 		log.Infof("Converting epic: %s", jiraIssue.Key)
 		epic := ConvertJiraIssueToGitLabEpic(gl, jr, jiraIssue)
 		epics = append(epics, epic)
-	},
-	)
+	}, true)
 
 	//* Issue
 	issueJql := fmt.Sprintf("%s project=%s AND type != Epic Order by key ASC", prefixJql, jiraProjectID)
@@ -91,7 +90,7 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 		log.Infof("Converting issue: %s", jiraIssue.Key)
 		gitlabIssue := ConvertJiraIssueToGitLabIssue(gl, jr, jiraIssue)
 		issues = append(issues, gitlabIssue)
-	})
+	}, true)
 
 	//* Link
 }
