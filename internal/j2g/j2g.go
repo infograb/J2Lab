@@ -29,8 +29,6 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 	log.Infof("Jira project: %s", jiraProject.Name)
 	log.Infof("GitLab project: %s", gitlabProject.Name)
 
-	// Get all issues from Jira project
-
 	// 프로젝트 뽑을 때 같이 뽑히는 것들 (Jira)
 	// Version
 	// Component
@@ -51,7 +49,7 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 
 	var prefixJql string
 	if cfg.Project.Jira.Jql != "" {
-		prefixJql = fmt.Sprintf("%s AND ", cfg.Project.Jira.Jql)
+		prefixJql = fmt.Sprintf("%s AND", cfg.Project.Jira.Jql)
 	} else {
 		prefixJql = ""
 	}
@@ -72,6 +70,7 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 			break
 		}
 
+		// TODO: API 호출 횟수를 줄이기 위해서는 위에서 뽑은 마일스톤을 issue 만드는 function에 주입해야 한다.
 		for _, issue := range issues {
 			log.Infof("Converting issue: %s", issue.Key)
 			ConvertJiraIssueToGitLabIssue(gl, jr, gitlabProjectPath, &issue)

@@ -17,8 +17,6 @@ func convertToGitLabComment(jiraComment *jira.Comment) *gitlab.CreateIssueNoteOp
 		log.Fatalf("Error parsing time: %s", err)
 	}
 
-	// <img src="/uploads/30f77bfbe3179d3f85b6b345ad9d8272/SCR-20230824-omhj.png" alt="SCR-20230824-omhj" width="300">
-
 	return &gitlab.CreateIssueNoteOptions{
 		Body:      &body,
 		CreatedAt: &created,
@@ -90,9 +88,13 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, pid inter
 		}
 	}
 
-	//* Resolution -> ClosedAt
+	//* Resolution -> Close issue (CloseAt)
 	if jiraIssue.Fields.Resolution != nil {
-		gitlabIssue.ClosedAt = (*time.Time)(&jiraIssue.Fields.Resolutiondate)
+		log.Infof("Closing issue: %d", gitlabIssue.IID)
+		gl.Issues.UpdateIssue(pid, gitlabIssue.IID, &gitlab.UpdateIssueOptions{
+			StateEvent: gitlab.String("close"),
+			UpdatedAt:  (*time.Time)(&jiraIssue.Fields.Resolutiondate), // 적용안됨
+		})
 	}
 
 	return nil

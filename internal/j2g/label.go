@@ -42,11 +42,12 @@ func createOrRetrieveLabel(gl *gitlab.Client, jr *jira.Client, pid interface{}, 
 	label, _, err := gl.Labels.GetLabel(pid, name)
 
 	if err != nil {
+		// 생상 랜덤 생성
 		rand.Seed(time.Now().UnixNano())
 		red, green, blue := rand.Intn(256), rand.Intn(256), rand.Intn(256)
 		colorHex := fmt.Sprintf("#%02X%02X%02X", red, green, blue)
 
-		// Label이 없으면 생성
+		// Label 생성
 		label, _, err := gl.Labels.CreateLabel(pid, &gitlab.CreateLabelOptions{
 			Name:        &name,
 			Description: &description,
