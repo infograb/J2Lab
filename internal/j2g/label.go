@@ -2,6 +2,8 @@ package j2g
 
 import (
 	"fmt"
+	"math/rand"
+	"time"
 
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
 	log "github.com/sirupsen/logrus"
@@ -38,15 +40,23 @@ func convertJiraToGitLabLabels(gl *gitlab.Client, jr *jira.Client, pid interface
 
 func createOrRetrieveLabel(gl *gitlab.Client, jr *jira.Client, pid interface{}, name string, description string) *gitlab.Label {
 	label, _, err := gl.Labels.GetLabel(pid, name)
+
 	if err != nil {
+		rand.Seed(time.Now().UnixNano())
+		red, green, blue := rand.Intn(256), rand.Intn(256), rand.Intn(256)
+		colorHex := fmt.Sprintf("#%02X%02X%02X", red, green, blue)
+
 		// Label이 없으면 생성
 		label, _, err := gl.Labels.CreateLabel(pid, &gitlab.CreateLabelOptions{
 			Name:        &name,
 			Description: &description,
+			Color:       &colorHex,
 		})
 		if err != nil {
 			log.Fatalf("Error creating label: %s", err)
 		}
+
+		log.Infof("Created label: %s", label.Name)
 		return label
 	}
 
