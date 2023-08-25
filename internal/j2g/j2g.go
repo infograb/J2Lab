@@ -10,7 +10,8 @@ import (
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/config"
 )
 
-func paginateJiraIssues(jr *jira.Client, jql string, convertFunc func(*jira.Issue) interface{}) {
+// Debug 모드에서는 오로지 한 번만 호출한다.
+func paginateJiraIssues(jr *jira.Client, jql string, convertFunc func(*jira.Issue), debug bool) {
 	startIndex := 0
 	for {
 		issues, _, err := jr.Issue.Search(context.Background(), jql, &jira.SearchOptions{
@@ -77,21 +78,19 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 
 	//* Epic
 	epicJql := fmt.Sprintf("%s project=%s AND type = Epic Order by key ASC", prefixJql, jiraProjectID)
-	paginateJiraIssues(jr, epicJql, func(jiraIssue *jira.Issue) interface{} {
+	paginateJiraIssues(jr, epicJql, func(jiraIssue *jira.Issue) {
 		log.Infof("Converting epic: %s", jiraIssue.Key)
 		epic := ConvertJiraIssueToGitLabEpic(gl, jr, jiraIssue)
 		epics = append(epics, epic)
-		return nil
 	},
 	)
 
 	//* Issue
 	issueJql := fmt.Sprintf("%s project=%s AND type != Epic Order by key ASC", prefixJql, jiraProjectID)
-	paginateJiraIssues(jr, issueJql, func(jiraIssue *jira.Issue) interface{} {
+	paginateJiraIssues(jr, issueJql, func(jiraIssue *jira.Issue) {
 		log.Infof("Converting issue: %s", jiraIssue.Key)
 		gitlabIssue := ConvertJiraIssueToGitLabIssue(gl, jr, jiraIssue)
 		issues = append(issues, gitlabIssue)
-		return nil
 	})
 
 	//* Link

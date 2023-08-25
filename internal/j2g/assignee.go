@@ -15,7 +15,13 @@ func convertJiraUserToGitLabUser(gl *gitlab.Client, jiraUser *jira.User) (*gitla
 	cfg := config.GetConfig()
 
 	jiraUserEmail := jiraUser.EmailAddress
+	if jiraUserEmail == "" {
+		log.Fatalf("Error getting Jira user email: %s", jiraUser.DisplayName)
+	}
 	gitlabUserEmail := cfg.Users[jiraUserEmail]
+	if gitlabUserEmail == "" {
+		log.Fatalf("Error getting GitLab user email from config.yaml: %s", jiraUserEmail)
+	}
 
 	users, _, err := gl.Users.ListUsers(&gitlab.ListUsersOptions{
 		Username: &gitlabUserEmail,
@@ -26,7 +32,7 @@ func convertJiraUserToGitLabUser(gl *gitlab.Client, jiraUser *jira.User) (*gitla
 	}
 
 	if len(users) == 0 {
-		log.Error("No user found")
+		log.Fatalf("No User found, gitlab: %s, jira: %s", gitlabUserEmail, jiraUserEmail)
 		return nil, err
 	}
 
