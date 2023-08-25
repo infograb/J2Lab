@@ -17,6 +17,8 @@ func convertToGitLabComment(jiraComment *jira.Comment) *gitlab.CreateIssueNoteOp
 		log.Fatalf("Error parsing time: %s", err)
 	}
 
+	// <img src="/uploads/30f77bfbe3179d3f85b6b345ad9d8272/SCR-20230824-omhj.png" alt="SCR-20230824-omhj" width="300">
+
 	return &gitlab.CreateIssueNoteOptions{
 		Body:      &body,
 		CreatedAt: &created,
@@ -35,16 +37,16 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, pid inter
 
 	gitlabCreateIssueOptions := &gitlab.CreateIssueOptions{
 		Title:       &jiraIssue.Fields.Summary,
-		Description: &jiraIssue.Fields.Description,
+		Description: &jiraIssue.Fields.Description, // TODO: Jira ADF -> GitLab Markdown
 		CreatedAt:   (*time.Time)(&jiraIssue.Fields.Created),
 		DueDate:     (*gitlab.ISOTime)(&jiraIssue.Fields.Duedate),
-		Labels:      (*gitlab.Labels)(&jiraIssue.Fields.Labels),
 		// Weight: StoryPoint,
 		// MilestoneID: &fixMilestone.ID,
 		// EpicID: ,
+		Labels: convertJiraToGitLabLabels(gl, jr, pid, jiraIssue),
 	}
 
-	// Assignee
+	//* Assignee
 	assignee, err := convertJiraUserToGitLabUser(gl, jiraIssue.Fields.Assignee)
 	if err != nil {
 		log.Fatalf("Error converting jira user to gitlab user: %s", err)
@@ -52,13 +54,14 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, pid inter
 		gitlabCreateIssueOptions.AssigneeIDs = &[]int{assignee.ID}
 	}
 
-	// 이슈를 생성합니다.
+	//* 이슈를 생성합니다.
 	gitlabIssue, gitlabResponse, err := gl.Issues.CreateIssue(pid, gitlabCreateIssueOptions)
 	if err != nil {
 		fmt.Println(gitlabResponse)
 	}
 
-	// Create Comment on Issue
+	//* Comment -> Comment
+	// TODO : Jira ADF -> GitLab Markdown
 	for _, jiraComment := range jiraIssue.Fields.Comments.Comments {
 		_, _, err := gl.Notes.CreateIssueNote(pid, gitlabIssue.IID, convertToGitLabComment(jiraComment))
 		if err != nil {
@@ -66,7 +69,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, pid inter
 		}
 	}
 
-	// attachment -> comments의 attachment
+	//* attachment -> comments의 attachment
 	for _, jiraAttachment := range jiraIssue.Fields.Attachments {
 		markdown := convertJiraAttachementToMarkdown(gl, jr, pid, jiraAttachment)
 		createdAt, err := time.Parse("2006-01-02T15:04:05.000-0700", jiraAttachment.Created)
@@ -83,7 +86,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, pid inter
 		}
 	}
 
-	// 필요하다면 이슈 닫기
+	//* Resolution -> ClosedAt
 	if jiraIssue.Fields.Resolution != nil {
 		gitlabIssue.ClosedAt = (*time.Time)(&jiraIssue.Fields.Resolutiondate)
 	}
