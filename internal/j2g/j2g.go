@@ -73,15 +73,15 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 		prefixJql = ""
 	}
 
-	var epics []*gitlab.Epic
-	var issues []*gitlab.Issue
+	var epicLinks map[string]*JiraEpicLink
+	var issueLinks map[string]*JiraIssueLink
 
 	//* Epic
 	epicJql := fmt.Sprintf("%s project=%s AND type = Epic Order by key ASC", prefixJql, jiraProjectID)
 	paginateJiraIssues(jr, epicJql, func(jiraIssue *jira.Issue) {
 		log.Infof("Converting epic: %s", jiraIssue.Key)
-		epic := ConvertJiraIssueToGitLabEpic(gl, jr, jiraIssue)
-		epics = append(epics, epic)
+		gitlabEpic := ConvertJiraIssueToGitLabEpic(gl, jr, jiraIssue)
+		epicLinks[jiraIssue.Key] = &JiraEpicLink{jiraIssue, gitlabEpic}
 	}, true)
 
 	//* Issue
@@ -89,8 +89,9 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 	paginateJiraIssues(jr, issueJql, func(jiraIssue *jira.Issue) {
 		log.Infof("Converting issue: %s", jiraIssue.Key)
 		gitlabIssue := ConvertJiraIssueToGitLabIssue(gl, jr, jiraIssue)
-		issues = append(issues, gitlabIssue)
+		issueLinks[jiraIssue.Key] = &JiraIssueLink{jiraIssue, gitlabIssue}
 	}, true)
 
 	//* Link
+	Link(gl, jr, epicLinks, issueLinks)
 }
