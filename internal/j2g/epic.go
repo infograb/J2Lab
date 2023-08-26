@@ -49,7 +49,7 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 	//* Comment -> Comment
 	// TODO : Jira ADF -> GitLab Markdown
 	for _, jiraComment := range jiraIssue.Fields.Comments.Comments {
-		createIssueNoteOptions := convertToGitLabComment(jiraComment)
+		createIssueNoteOptions := convertToGitLabComment(jiraIssue.Key, jiraComment)
 		createEpicNoteOptions := gitlab.CreateEpicNoteOptions{
 			Body: createIssueNoteOptions.Body,
 		}
