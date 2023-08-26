@@ -65,7 +65,7 @@ func parseUsers() map[string]string {
 		log.Fatalf("Error getting home directory: %s", err)
 	}
 
-	file, err := os.Open(filepath.Join(pwd, "users.txt"))
+	file, err := os.Open(filepath.Join(pwd, "users.csv"))
 	if err != nil {
 		log.Fatalf("Error opening users file: %s", err)
 	}
@@ -75,9 +75,10 @@ func parseUsers() map[string]string {
 
 	// Read the file line by line
 	scanner := bufio.NewScanner(file)
+	scanner.Scan() // skip the first line
 	for scanner.Scan() {
 		line := scanner.Text()
-		parts := strings.Split(line, ":")
+		parts := strings.Split(line, ",")
 		if len(parts) == 2 {
 			key := strings.TrimSpace(parts[0])
 			value := strings.TrimSpace(parts[1])
