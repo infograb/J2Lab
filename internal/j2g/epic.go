@@ -1,71 +1,21 @@
 package j2g
 
 import (
-	"fmt"
-	"net/http"
-	"strconv"
 	"time"
 
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
 	log "github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/config"
+	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/gitlabx"
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/utils"
 )
-
-type CreateEpicOptions struct {
-	Title            *string         `url:"title,omitempty" json:"title,omitempty"`
-	Description      *string         `url:"description,omitempty" json:"description,omitempty"`
-	Labels           *gitlab.Labels  `url:"labels,comma,omitempty" json:"labels,omitempty"`
-	StartDateIsFixed *bool           `url:"start_date_is_fixed,omitempty" json:"start_date_is_fixed,omitempty"`
-	StartDateFixed   *gitlab.ISOTime `url:"start_date_fixed,omitempty" json:"start_date_fixed,omitempty"`
-	DueDateIsFixed   *bool           `url:"due_date_is_fixed,omitempty" json:"due_date_is_fixed,omitempty"`
-	DueDateFixed     *gitlab.ISOTime `url:"due_date_fixed,omitempty" json:"due_date_fixed,omitempty"`
-
-	//* 라이브러리에서 지원하지 않는 추가 옵션
-	Color        *string    `url:"color,omitempty" json:"color,omitempty"`
-	Confidential *bool      `url:"confidential,omitempty" json:"confidential,omitempty"`
-	CreatedAt    *time.Time `url:"created_at,omitempty" json:"created_at,omitempty"`
-	// ParentID ...
-}
-
-func parseID(id interface{}) (string, error) {
-	switch v := id.(type) {
-	case int:
-		return strconv.Itoa(v), nil
-	case string:
-		return v, nil
-	default:
-		return "", fmt.Errorf("invalid ID type %#v, the ID must be an int or a string", id)
-	}
-}
-
-func createEpic(gl *gitlab.Client, gid interface{}, opt *CreateEpicOptions) (*gitlab.Epic, *gitlab.Response, error) {
-	group, err := parseID(gid)
-	if err != nil {
-		return nil, nil, err
-	}
-	u := fmt.Sprintf("groups/%s/epics", gitlab.PathEscape(group))
-
-	req, err := gl.NewRequest(http.MethodPost, u, opt, nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	e := new(gitlab.Epic)
-	resp, err := gl.Do(req, e)
-	if err != nil {
-		return nil, resp, err
-	}
-
-	return e, resp, nil
-}
 
 func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue *jira.Issue) *gitlab.Epic {
 	cfg := config.GetConfig()
 	gid := cfg.Project.GitLab.Epic
 
-	gitlabCreateEpicOptions := CreateEpicOptions{
+	gitlabCreateEpicOptions := gitlabx.CreateEpicOptions{
 		Title:        gitlab.String(jiraIssue.Fields.Summary),
 		Description:  gitlab.String(jiraIssue.Fields.Description),
 		Color:        utils.RandomColor(),
@@ -90,10 +40,11 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 	// TODO
 
 	//* 에픽을 생성합니다.
-	gitlabEpic, _, err := createEpic(gl, cfg.Project.GitLab.Epic, &gitlabCreateEpicOptions)
+	gitlabEpic, _, err := gitlabx.CreateEpic(gl, cfg.Project.GitLab.Epic, &gitlabCreateEpicOptions)
 	if err != nil {
 		log.Fatalf("Error creating GitLab epic: %s", err)
 	}
+	log.Debugf("Created GitLab epic: %d from Jira issue: %s", gitlabEpic.IID, jiraIssue.Key)
 
 	//* Comment -> Comment
 	// TODO : Jira ADF -> GitLab Markdown
@@ -129,10 +80,10 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 
 	//* Resolution -> Close issue (CloseAt)
 	if jiraIssue.Fields.Resolution != nil {
-		log.Infof("Closing issue: %d", gitlabEpic.IID)
 		gl.Epics.UpdateEpic(gid, gitlabEpic.IID, &gitlab.UpdateEpicOptions{
 			StateEvent: gitlab.String("close"),
 		})
+		log.Debugf("Closed GitLab epic: %d", gitlabEpic.IID)
 	}
 
 	return gitlabEpic
