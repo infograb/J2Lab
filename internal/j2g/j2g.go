@@ -11,7 +11,7 @@ import (
 )
 
 // Debug 모드에서는 오로지 한 번만 호출한다.
-func paginateJiraIssues(jr *jira.Client, jql string, convertFunc func(jira.Issue)) { // TODO Debug 모드 제거
+func paginateJiraIssues(jr *jira.Client, jql string, convertFunc func(jira.Issue)) {
 	startIndex := 0
 	for {
 		issues, _, err := jr.Issue.Search(context.Background(), jql, &jira.SearchOptions{

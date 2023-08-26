@@ -13,10 +13,6 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 	cfg := config.GetConfig()
 	pid := cfg.Project.GitLab.Issue
 
-	// TODO: epic -> epic : GitLab 프로젝트는 반드시 상위 그룹이 있어야 한다.
-	//? 어느 부모에 에픽을 넣어야 하지?
-	// gitlabCreateIssueOptions.EpicID
-
 	gitlabCreateIssueOptions := &gitlab.CreateIssueOptions{
 		Title:       &jiraIssue.Fields.Summary,
 		Description: formatDescription(jiraIssue.Key, jiraIssue.Fields.Description),
@@ -60,7 +56,6 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 	log.Debugf("Created GitLab issue: %d from Jira issue: %s", gitlabIssue.IID, jiraIssue.Key)
 
 	//* Comment -> Comment
-	// TODO : Jira ADF -> GitLab Markdown
 	for _, jiraComment := range jiraIssue.Fields.Comments.Comments {
 		_, _, err := gl.Notes.CreateIssueNote(pid, gitlabIssue.IID, convertToGitLabComment(jiraIssue.Key, jiraComment))
 		if err != nil {
@@ -96,7 +91,3 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 
 	return gitlabIssue
 }
-
-// 이슈를 모두 만든 후 차례로 연결
-// TODO: subtasks -> tasks
-// TODO: issuelinks ( jira issue title - related - jira issue title ) - relate issue

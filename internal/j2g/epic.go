@@ -37,7 +37,7 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 	}
 
 	//* DueDate
-	// TODO
+	// TODO DueDate
 
 	//* 에픽을 생성합니다.
 	gitlabEpic, _, err := gitlabx.CreateEpic(gl, cfg.Project.GitLab.Epic, &gitlabCreateEpicOptions)
@@ -47,7 +47,6 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 	log.Debugf("Created GitLab epic: %d from Jira issue: %s", gitlabEpic.IID, jiraIssue.Key)
 
 	//* Comment -> Comment
-	// TODO : Jira ADF -> GitLab Markdown
 	for _, jiraComment := range jiraIssue.Fields.Comments.Comments {
 		createIssueNoteOptions := convertToGitLabComment(jiraIssue.Key, jiraComment)
 		createEpicNoteOptions := gitlab.CreateEpicNoteOptions{
