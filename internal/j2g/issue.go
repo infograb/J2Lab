@@ -19,7 +19,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 
 	gitlabCreateIssueOptions := &gitlab.CreateIssueOptions{
 		Title:       &jiraIssue.Fields.Summary,
-		Description: &jiraIssue.Fields.Description, // TODO: Jira ADF -> GitLab Markdown
+		Description: formatDescription(jiraIssue.Key, jiraIssue.Fields.Description),
 		CreatedAt:   (*time.Time)(&jiraIssue.Fields.Created),
 		DueDate:     (*gitlab.ISOTime)(&jiraIssue.Fields.Duedate),
 		// Weight: StoryPoint,

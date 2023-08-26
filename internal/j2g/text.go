@@ -21,11 +21,19 @@ func convertToGitLabComment(issueKey string, jiraComment *jira.Comment) *gitlab.
 	cfg := config.GetConfig()
 
 	commentLink := fmt.Sprintf("%s/browse/%s?focusedCommentId=%s", cfg.Jira.Host, issueKey, jiraComment.ID)
-	body := fmt.Sprintf("%s\n\nauthored by %s at %s [original](%s)",
-		jiraComment.Body, jiraComment.Author.DisplayName, created.Format("2006-01-02 15:04:05"), commentLink)
+	dateFormat := fmt.Sprintf("%s at %s", created.Format("January 02, 2006"), created.Format("3:04 PM"))
+	body := fmt.Sprintf("%s\n\n%s by %s [[Original](%s)]",
+		jiraComment.Body, dateFormat, jiraComment.Author.DisplayName, commentLink)
 
 	return &gitlab.CreateIssueNoteOptions{
 		Body:      &body,
 		CreatedAt: &created,
 	}
+}
+
+// TODO: Jira ADF -> GitLab Markdown
+func formatDescription(issueKey string, description string) *string {
+	cfg := config.GetConfig()
+	result := fmt.Sprintf("%s\n\nImported from Jira [%s](%s/browse/%s)", description, issueKey, cfg.Jira.Host, issueKey)
+	return &result
 }
