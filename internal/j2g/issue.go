@@ -1,7 +1,6 @@
 package j2g
 
 import (
-	"fmt"
 	"time"
 
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
@@ -9,20 +8,6 @@ import (
 	gitlab "github.com/xanzy/go-gitlab"
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/config"
 )
-
-// comment -> comments : GitLab 작성자는 API owner이지만, 텍스트로 Jira 작성자를 표현
-func convertToGitLabComment(jiraComment *jira.Comment) *gitlab.CreateIssueNoteOptions {
-	body := fmt.Sprintf("%s\n\nauthored by %s at %s", jiraComment.Body, jiraComment.Author.DisplayName, jiraComment.Created)
-	created, err := time.Parse("2006-01-02T15:04:05.000-0700", jiraComment.Created)
-	if err != nil {
-		log.Fatalf("Error parsing time: %s", err)
-	}
-
-	return &gitlab.CreateIssueNoteOptions{
-		Body:      &body,
-		CreatedAt: &created,
-	}
-}
 
 func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue *jira.Issue) *gitlab.Issue {
 	cfg := config.GetConfig()
@@ -34,7 +19,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 
 	gitlabCreateIssueOptions := &gitlab.CreateIssueOptions{
 		Title:       &jiraIssue.Fields.Summary,
-		Description: &jiraIssue.Fields.Description, // TODO: Jira ADF -> GitLab Markdown
+		Description: formatDescription(jiraIssue.Key, jiraIssue.Fields.Description),
 		CreatedAt:   (*time.Time)(&jiraIssue.Fields.Created),
 		DueDate:     (*gitlab.ISOTime)(&jiraIssue.Fields.Duedate),
 		// Weight: StoryPoint,
@@ -77,7 +62,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 	//* Comment -> Comment
 	// TODO : Jira ADF -> GitLab Markdown
 	for _, jiraComment := range jiraIssue.Fields.Comments.Comments {
-		_, _, err := gl.Notes.CreateIssueNote(pid, gitlabIssue.IID, convertToGitLabComment(jiraComment))
+		_, _, err := gl.Notes.CreateIssueNote(pid, gitlabIssue.IID, convertToGitLabComment(jiraIssue.Key, jiraComment))
 		if err != nil {
 			log.Fatalf("Error creating GitLab comment: %s", err)
 		}
