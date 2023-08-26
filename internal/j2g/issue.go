@@ -72,6 +72,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 	if err != nil {
 		log.Fatalf("Error creating GitLab issue: %s", err)
 	}
+	log.Debugf("Created GitLab issue: %d from Jira issue: %s", gitlabIssue.IID, jiraIssue.Key)
 
 	//* Comment -> Comment
 	// TODO : Jira ADF -> GitLab Markdown
@@ -101,11 +102,11 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 
 	//* Resolution -> Close issue (CloseAt)
 	if jiraIssue.Fields.Resolution != nil {
-		log.Infof("Closing issue: %d", gitlabIssue.IID)
 		gl.Issues.UpdateIssue(pid, gitlabIssue.IID, &gitlab.UpdateIssueOptions{
 			StateEvent: gitlab.String("close"),
 			UpdatedAt:  (*time.Time)(&jiraIssue.Fields.Resolutiondate), // 적용안됨
 		})
+		log.Debugf("Closed GitLab issue: %d", gitlabIssue.IID)
 	}
 
 	return gitlabIssue
