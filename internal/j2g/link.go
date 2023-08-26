@@ -6,43 +6,26 @@ import (
 
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
 	gitlab "github.com/xanzy/go-gitlab"
+	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/gitlabx"
 )
 
-type JiraIssueLink struct {
+type IssueLink struct {
 	jiraIssue   *jira.Issue
 	gitlabIssue *gitlab.Issue
 }
 
-type JiraEpicLink struct {
+type EpicLink struct {
 	jiraIssue  *jira.Issue
 	gitlabEpic *gitlab.Epic
 }
 
-//* 능동태만 수행한다.
-
-//* Jira
-// is blocked by
-// blocks //* -> relates to
-// is cloned by
-// clones //* -> relates to
-// is duplicated by //* -> relates to
-// duplicates //* -> relates to
-// relates to
-
-//* GitLab
-// relates to
-// blocks
-// is blocked by
-
 func convertLinkType(linkType string) *string {
 	linkTypeMap := map[string]string{
-		"is blocked by":    "is blocked by",
-		"blocks":           "blocks",
-		"is cloned by":     "related to",
-		"clones":           "relates to",
-		"is duplicated by": "related to",
-		"duplicates":       "relates to",
-		"relates to":       "relates to",
+		// Jira issue type -> GitLab issue/epic type
+		"Blocks":    "blocks",
+		"Cloners":   "relates_to",
+		"Duplicate": "relates_to",
+		"Relates":   "relates_to",
 	}
 
 	if convertedLinkType, ok := linkTypeMap[linkType]; ok {
@@ -53,23 +36,30 @@ func convertLinkType(linkType string) *string {
 	}
 }
 
-func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*JiraEpicLink, issueLinks map[string]*JiraIssueLink) {
+func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*EpicLink, issueLinks map[string]*IssueLink) {
+	//* Jira Issue Parent -> GitLab Epic
 	for _, issueLink := range issueLinks {
 		pid := fmt.Sprintf("%d", issueLink.gitlabIssue.ProjectID)
 		gitlabIssue, jiraIssue := issueLink.gitlabIssue, issueLink.jiraIssue
 
-		//* Jira Issue Parent -> GitLab Epic
 		// Jira는 Epic의 부모 Epic이 없고, GitLab은 Epic이 다른 Epic의 부모가 될 수 있다.
 		if jiraIssue.Fields.Parent != nil {
-
 			if _, ok := epicLinks[jiraIssue.Fields.Parent.Key]; ok {
-				gl.Issues.UpdateIssue(pid, gitlabIssue.IID, &gitlab.UpdateIssueOptions{
+				_, _, err := gl.Issues.UpdateIssue(pid, gitlabIssue.IID, &gitlab.UpdateIssueOptions{
 					EpicID: &epicLinks[jiraIssue.Fields.Parent.Key].gitlabEpic.ID,
 				})
+				if err != nil {
+					log.Fatalf("Error adding GitLab epic parent: %s", err)
+				}
 			}
 		}
+	}
 
-		//* Issue
+	//* Link Issue with other issues
+	for _, issueLink := range issueLinks {
+		pid := fmt.Sprintf("%d", issueLink.gitlabIssue.ProjectID)
+		gitlabIssue, jiraIssue := issueLink.gitlabIssue, issueLink.jiraIssue
+
 		if issueLink.jiraIssue.Fields.IssueLinks != nil {
 			for _, innerIssueLink := range jiraIssue.Fields.IssueLinks {
 				outwardIssue := innerIssueLink.OutwardIssue
@@ -84,43 +74,47 @@ func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*JiraEpicLink
 				if outwardIssue != nil {
 					if _, ok := issueLinks[outwardIssue.Key]; ok {
 						targetIssueIID := fmt.Sprintf("%d", issueLinks[outwardIssue.Key].gitlabIssue.IID)
-						gl.IssueLinks.CreateIssueLink(pid, gitlabIssue.IID, &gitlab.CreateIssueLinkOptions{
+						_, _, err := gl.IssueLinks.CreateIssueLink(pid, gitlabIssue.IID, &gitlab.CreateIssueLinkOptions{
 							// IID: &issueLinks[innerIssueLink.OutwardIssue.Key].gitlabIssue.IID,
 							TargetProjectID: &pid,
 							TargetIssueIID:  &targetIssueIID,
 							LinkType:        convertLinkType(outwardType),
 						})
+						if err != nil {
+							log.Fatalf("Error creating GitLab issue link: %s", err)
+						}
 					}
 				}
 			}
 		}
 	}
 
+	//* Link Epic with other epics
 	for _, epicLink := range epicLinks {
-		pid := fmt.Sprintf("%d", epicLink.gitlabEpic.GroupID)
+		gid := fmt.Sprintf("%d", epicLink.gitlabEpic.GroupID)
 		gitlabEpic, jiraIssue := epicLink.gitlabEpic, epicLink.jiraIssue
 
-		//* Epic
 		if epicLink.jiraIssue.Fields.IssueLinks != nil {
 			for _, innerIssueLink := range jiraIssue.Fields.IssueLinks {
 				outwardIssue := innerIssueLink.OutwardIssue
 				outwardType := innerIssueLink.Type.Name
 
 				// GitLab Epic은 GitLab Epic 끼리만 연결할 수 있다.
-				if outwardIssue == nil || outwardIssue.Fields.Type.Name != "Issue" {
+				if outwardIssue == nil || outwardIssue.Fields.Type.Name == "Issue" {
 					continue
 				}
 
 				if outwardIssue != nil {
 					if _, ok := epicLinks[outwardIssue.Key]; ok {
 						targetEpicIID := fmt.Sprintf("%d", epicLinks[outwardIssue.Key].gitlabEpic.IID)
-						// gl.Epics.CreateIssueLink(pid, gitlabEpic.IID, &gitlab.CreateIssueLinkOptions{
-						// 	// IID: &epicLinks[innerIssueLink.OutwardIssue.Key].gitlabEpic.IID,
-						// 	TargetProjectID: &pid,
-						// 	TargetIssueIID:  &targetEpicIID,
-						// 	LinkType:        convertLinkType(outwardType),
-						// })
-						// TODO : Epic Link는 아직 지원하지 않는다. https://docs.gitlab.com/ee/api/linked_epics.html
+						_, _, err := gitlabx.CreateEpicLink(gl, gid, gitlabEpic.IID, &gitlabx.CreateEpicLinkOptions{
+							TargetGroupID: &gid,
+							TargetEpicIID: &targetEpicIID,
+							LinkType:      convertLinkType(outwardType),
+						})
+						if err != nil {
+							log.Fatalf("Error creating GitLab epic link: %s", err)
+						}
 					}
 				}
 			}

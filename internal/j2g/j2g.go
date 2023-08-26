@@ -11,7 +11,7 @@ import (
 )
 
 // Debug 모드에서는 오로지 한 번만 호출한다.
-func paginateJiraIssues(jr *jira.Client, jql string, convertFunc func(*jira.Issue), debug bool) { // TODO Debug 모드 제거
+func paginateJiraIssues(jr *jira.Client, jql string, convertFunc func(jira.Issue)) { // TODO Debug 모드 제거
 	startIndex := 0
 	for {
 		issues, _, err := jr.Issue.Search(context.Background(), jql, &jira.SearchOptions{
@@ -27,7 +27,7 @@ func paginateJiraIssues(jr *jira.Client, jql string, convertFunc func(*jira.Issu
 		}
 
 		for _, issue := range issues {
-			convertFunc(&issue)
+			convertFunc(issue)
 		}
 		startIndex += len(issues)
 	}
@@ -68,29 +68,29 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 
 	var prefixJql string
 	if cfg.Project.Jira.Jql != "" {
-		prefixJql = fmt.Sprintf("%s AND", cfg.Project.Jira.Jql)
+		prefixJql = fmt.Sprintf("(%s) AND", cfg.Project.Jira.Jql)
 	} else {
 		prefixJql = ""
 	}
 
-	var epicLinks map[string]*JiraEpicLink
-	var issueLinks map[string]*JiraIssueLink
+	epicLinks := make(map[string]*EpicLink)
+	issueLinks := make(map[string]*IssueLink)
 
 	//* Epic
 	epicJql := fmt.Sprintf("%s project=%s AND type = Epic Order by key ASC", prefixJql, jiraProjectID)
-	paginateJiraIssues(jr, epicJql, func(jiraIssue *jira.Issue) {
+	paginateJiraIssues(jr, epicJql, func(jiraIssue jira.Issue) {
 		log.Infof("Converting epic: %s", jiraIssue.Key)
-		gitlabEpic := ConvertJiraIssueToGitLabEpic(gl, jr, jiraIssue)
-		epicLinks[jiraIssue.Key] = &JiraEpicLink{jiraIssue, gitlabEpic}
-	}, true)
+		gitlabEpic := ConvertJiraIssueToGitLabEpic(gl, jr, &jiraIssue)
+		epicLinks[jiraIssue.Key] = &EpicLink{&jiraIssue, gitlabEpic}
+	})
 
 	//* Issue
 	issueJql := fmt.Sprintf("%s project=%s AND type != Epic Order by key ASC", prefixJql, jiraProjectID)
-	paginateJiraIssues(jr, issueJql, func(jiraIssue *jira.Issue) {
+	paginateJiraIssues(jr, issueJql, func(jiraIssue jira.Issue) {
 		log.Infof("Converting issue: %s", jiraIssue.Key)
-		gitlabIssue := ConvertJiraIssueToGitLabIssue(gl, jr, jiraIssue)
-		issueLinks[jiraIssue.Key] = &JiraIssueLink{jiraIssue, gitlabIssue}
-	}, true)
+		gitlabIssue := ConvertJiraIssueToGitLabIssue(gl, jr, &jiraIssue)
+		issueLinks[jiraIssue.Key] = &IssueLink{&jiraIssue, gitlabIssue}
+	})
 
 	//* Link
 	Link(gl, jr, epicLinks, issueLinks)
