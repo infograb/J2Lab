@@ -17,7 +17,6 @@ func convertToGitLabComment(issueKey string, jiraComment *jira.Comment) *gitlab.
 		log.Fatalf("Error parsing time: %s", err)
 	}
 
-	// https://ig-cave.atlassian.net/browse/SSP-25?focusedCommentId=10040
 	cfg := config.GetConfig()
 
 	commentLink := fmt.Sprintf("%s/browse/%s?focusedCommentId=%s", cfg.Jira.Host, issueKey, jiraComment.ID)

@@ -10,7 +10,6 @@ import (
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/config"
 )
 
-// Debug 모드에서는 오로지 한 번만 호출한다.
 func paginateJiraIssues(jr *jira.Client, jql string, convertFunc func(jira.Issue)) {
 	startIndex := 0
 	for {

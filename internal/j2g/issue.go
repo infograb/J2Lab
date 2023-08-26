@@ -18,10 +18,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 		Description: formatDescription(jiraIssue.Key, jiraIssue.Fields.Description),
 		CreatedAt:   (*time.Time)(&jiraIssue.Fields.Created),
 		DueDate:     (*gitlab.ISOTime)(&jiraIssue.Fields.Duedate),
-		// Weight: StoryPoint,
-		// MilestoneID: &fixMilestone.ID,
-		// EpicID: ,
-		Labels: convertJiraToGitLabLabels(gl, jr, pid, jiraIssue, false),
+		Labels:      convertJiraToGitLabLabels(gl, jr, pid, jiraIssue, false),
 	}
 
 	//* Assignee
