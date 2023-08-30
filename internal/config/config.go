@@ -57,6 +57,7 @@ func capitalizeJiraProject(cfg *Config) {
 	jiraProjectID := cfg.Project.Jira.Name
 	caser := cases.Upper(language.English)
 	cfg.Project.Jira.Name = caser.String(jiraProjectID)
+
 }
 
 func parseUsers() map[string]string {
