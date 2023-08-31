@@ -1,4 +1,4 @@
-package j2g
+package adf
 
 import (
 	"bytes"
