@@ -32,6 +32,7 @@ func GetJiraUsersFromIssues(issues []*jirax.Issue) []*jira.User {
 	jiraAccountIds := make(map[string]*jira.User)
 	for _, jiraIssue := range issues {
 		// TODO: API를 분석해서 User를 판단할 구석을 만들어야 함
+		// TODO: Check User Mention
 		assignee := jiraIssue.Fields.Assignee
 		reporter := jiraIssue.Fields.Reporter
 
