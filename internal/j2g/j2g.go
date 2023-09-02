@@ -56,7 +56,7 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 	//* Project Milestones
 	//* Sensitive to the title
 
-	existingMilestones, err := gitlabx.Paginate[gitlab.Milestone](gl, func(opt *gitlab.ListOptions) ([]*gitlab.Milestone, *gitlab.Response, error) {
+	existingMilestones, err := gitlabx.Unpaginate[gitlab.Milestone](gl, func(opt *gitlab.ListOptions) ([]*gitlab.Milestone, *gitlab.Response, error) {
 		return gl.Milestones.ListMilestones(gitlabProject.ID, &gitlab.ListMilestonesOptions{ListOptions: *opt})
 	})
 	if err != nil {

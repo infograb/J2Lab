@@ -18,7 +18,7 @@ func parseID(id interface{}) (string, error) {
 	}
 }
 
-func Paginate[T any](
+func Unpaginate[T any](
 	gl *gitlab.Client,
 	function func(opt *gitlab.ListOptions) ([]*T, *gitlab.Response, error),
 ) ([]*T, error) {
