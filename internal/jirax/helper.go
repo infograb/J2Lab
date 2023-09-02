@@ -12,6 +12,7 @@ func Unpaginate[T any](
 	searchOptions := &jira.SearchOptions{
 		StartAt:    0,
 		MaxResults: 100,
+		Fields:     []string{"*all"},
 	}
 
 	for {
