@@ -13,17 +13,17 @@ const (
 )
 
 type Options struct {
-	utils.IOStreams
+	*utils.IOStreams
 }
 
-func NewOptions(ioStreams utils.IOStreams) *Options {
+func NewOptions(ioStreams *utils.IOStreams) *Options {
 	return &Options{
 		IOStreams: ioStreams,
 	}
 }
 
 // NewCmdVersion returns a cobra command for fetching versions
-func NewCmdVersion(ioStreams utils.IOStreams) *cobra.Command {
+func NewCmdVersion(ioStreams *utils.IOStreams) *cobra.Command {
 	o := NewOptions(ioStreams)
 	cmd := &cobra.Command{
 		Use:     "version",

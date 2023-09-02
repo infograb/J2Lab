@@ -9,22 +9,21 @@ import (
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/utils"
 )
 
-func newCmdConfigLint(ioStreams utils.IOStreams) *cobra.Command {
-	o := NewOptions(ioStreams)
+func newCmdConfigLint(ioStreams *utils.IOStreams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "lint",
 		Short:   "Lint the config.yml file",
 		Long:    "Lint the config.yml file",
 		Example: "",
 		Run: func(cmd *cobra.Command, args []string) {
-			utils.CheckErr(runConfigLint(o))
+			utils.CheckErr(runConfigLint(ioStreams))
 		},
 	}
 
 	return cmd
 }
 
-func runConfigLint(o *Options) error {
+func runConfigLint(ioStreams *utils.IOStreams) error {
 	// Config 가져오기
 	var cfg config.Config
 	err := viper.Unmarshal(&cfg)
