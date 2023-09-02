@@ -8,16 +8,17 @@ import (
 	gitlab "github.com/xanzy/go-gitlab"
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/config"
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/gitlabx"
+	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/jirax"
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/utils"
 )
 
-func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue *jira.Issue) *gitlab.Epic {
+func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue *jirax.Issue) *gitlab.Epic {
 	cfg := config.GetConfig()
 	gid := cfg.Project.GitLab.Epic
 
 	gitlabCreateEpicOptions := gitlabx.CreateEpicOptions{
 		Title:        gitlab.String(jiraIssue.Fields.Summary),
-		Description:  formatDescription(jiraIssue.Key, jiraIssue.Fields.Description),
+		Description:  formatDescription(jr, jiraIssue.Key, jiraIssue.Fields.Description),
 		Color:        utils.RandomColor(),
 		CreatedAt:    (*time.Time)(&jiraIssue.Fields.Created),
 		Labels:       convertJiraToGitLabLabels(gl, jr, gid, jiraIssue, true),
@@ -52,7 +53,7 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 
 	//* Comment -> Comment
 	for _, jiraComment := range jiraIssue.Fields.Comments.Comments {
-		createIssueNoteOptions := convertToGitLabComment(jiraIssue.Key, jiraComment)
+		createIssueNoteOptions := convertToGitLabComment(jr, jiraIssue.Key, jiraComment)
 		createEpicNoteOptions := gitlab.CreateEpicNoteOptions{
 			Body: createIssueNoteOptions.Body,
 		}

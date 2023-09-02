@@ -7,23 +7,26 @@ import (
 	log "github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/config"
+	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/jirax"
 )
 
-func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue *jira.Issue, userMap UserMap) *gitlab.Issue {
+func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue *jirax.Issue, userMap UserMap) *gitlab.Issue {
 	cfg := config.GetConfig()
 	pid := cfg.Project.GitLab.Issue
 
 	gitlabCreateIssueOptions := &gitlab.CreateIssueOptions{
 		Title:       &jiraIssue.Fields.Summary,
-		Description: formatDescription(jiraIssue.Key, jiraIssue.Fields.Description),
+		Description: formatDescription(jr, jiraIssue.Key, jiraIssue.Fields.Description),
 		CreatedAt:   (*time.Time)(&jiraIssue.Fields.Created),
 		DueDate:     (*gitlab.ISOTime)(&jiraIssue.Fields.Duedate),
 		Labels:      convertJiraToGitLabLabels(gl, jr, pid, jiraIssue, false),
 	}
 
 	//* Assignee
-	if assignee, ok := userMap[jiraIssue.Fields.Assignee.EmailAddress]; ok {
-		gitlabCreateIssueOptions.AssigneeIDs = &[]int{assignee.ID}
+	if jiraIssue.Fields.Assignee != nil {
+		if assignee, ok := userMap[jiraIssue.Fields.Assignee.AccountID]; ok {
+			gitlabCreateIssueOptions.AssigneeIDs = &[]int{assignee.ID}
+		}
 	}
 
 	//* Version -> Milestone
@@ -55,7 +58,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 
 	//* Comment -> Comment
 	for _, jiraComment := range jiraIssue.Fields.Comments.Comments {
-		_, _, err := gl.Notes.CreateIssueNote(pid, gitlabIssue.IID, convertToGitLabComment(jiraIssue.Key, jiraComment))
+		_, _, err := gl.Notes.CreateIssueNote(pid, gitlabIssue.IID, convertToGitLabComment(jr, jiraIssue.Key, jiraComment))
 		if err != nil {
 			log.Fatalf("Error creating GitLab comment: %s", err)
 		}

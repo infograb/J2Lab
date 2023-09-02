@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-func AdfToMarkdown(blocks []ADFBlock) string {
+func AdfToMarkdown(blocks []*ADFBlock) string {
 
 	var md strings.Builder
 

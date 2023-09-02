@@ -14,7 +14,7 @@ import (
 
 type UserMap map[string]*gitlab.User // Jria Account ID to GitLab ID
 
-func GetJiraIssues(jr *jira.Client, jiraProjectID string, jql string) ([]jira.Issue, []jira.Issue) {
+func GetJiraIssues(jr *jira.Client, jiraProjectID string, jql string) ([]*jirax.Issue, []*jirax.Issue) {
 	//* JQL
 	var prefixJql string
 	if jql != "" {
@@ -25,18 +25,14 @@ func GetJiraIssues(jr *jira.Client, jiraProjectID string, jql string) ([]jira.Is
 
 	//* Get Jira Issues for Epic
 	epicJql := fmt.Sprintf("%s project=%s AND type = Epic Order by key ASC", prefixJql, jiraProjectID)
-	jiraEpics, err := jirax.Unpaginate[jira.Issue](jr, func(searchOptions *jira.SearchOptions) ([]jira.Issue, *jira.Response, error) {
-		return jr.Issue.Search(context.Background(), epicJql, searchOptions)
-	})
+	jiraEpics, err := jirax.UnpaginateIssue(jr, epicJql)
 	if err != nil {
 		log.Fatalf("Error getting Jira issues for GitLab Epics: %s", err)
 	}
 
 	//* Get Jira Issues for Issue
 	issueJql := fmt.Sprintf("%s project=%s AND type != Epic Order by key ASC", prefixJql, jiraProjectID)
-	jiraIssues, err := jirax.Unpaginate[jira.Issue](jr, func(searchOptions *jira.SearchOptions) ([]jira.Issue, *jira.Response, error) {
-		return jr.Issue.Search(context.Background(), issueJql, searchOptions)
-	})
+	jiraIssues, err := jirax.UnpaginateIssue(jr, issueJql)
 	if err != nil {
 		log.Fatalf("Error getting Jira issues for GitLab Issues: %s", err)
 	}
@@ -100,21 +96,21 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 		}
 	}
 
-	epicLinks := make(map[string]*EpicLink)
-	issueLinks := make(map[string]*IssueLink)
+	epicLinks := make(map[string]*JiraEpicLink)
+	issueLinks := make(map[string]*JiraIssueLink)
 
 	//* Epic
 	for _, jiraEpic := range jiraEpics {
 		log.Infof("Converting epic: %s", jiraEpic.Key)
-		gitlabEpic := ConvertJiraIssueToGitLabEpic(gl, jr, &jiraEpic)
-		epicLinks[jiraEpic.Key] = &EpicLink{&jiraEpic, gitlabEpic}
+		gitlabEpic := ConvertJiraIssueToGitLabEpic(gl, jr, jiraEpic)
+		epicLinks[jiraEpic.Key] = &JiraEpicLink{jiraEpic, gitlabEpic}
 	}
 
 	//* Issue
 	for _, jiraIssue := range jiraIssues {
 		log.Infof("Converting issue: %s", jiraIssue.Key)
-		gitlabIssue := ConvertJiraIssueToGitLabIssue(gl, jr, &jiraIssue, userMap)
-		issueLinks[jiraIssue.Key] = &IssueLink{&jiraIssue, gitlabIssue}
+		gitlabIssue := ConvertJiraIssueToGitLabIssue(gl, jr, jiraIssue, userMap)
+		issueLinks[jiraIssue.Key] = &JiraIssueLink{jiraIssue, gitlabIssue}
 	}
 
 	//* Link

@@ -1,11 +1,10 @@
 package adf
 
 import (
-	"fmt"
 	"strings"
 )
 
-func handleBulletList(block ADFBlock) string {
+func handleBulletList(block *ADFBlock) string {
 	var md strings.Builder
 	for _, listItem := range block.Content {
 		if listItem.Type == "listItem" && len(listItem.Content) > 0 {
@@ -21,18 +20,18 @@ func handleBulletList(block ADFBlock) string {
 	return md.String()
 }
 
-func handleParagraph(block ADFBlock) string {
+func handleParagraph(block *ADFBlock) string {
 	var md strings.Builder
 	for _, content := range block.Content {
 		switch content.Type {
 		case "mention":
 			// TODO: Jira Username -> GitLab Username 으로 변경 필요, 현재는 Jira Username으로 진행됨
-			md.WriteString(fmt.Sprintf("%s", content.Attrs["text"].(string)))
+			md.WriteString(content.Attrs["text"].(string))
 		case "text":
 			if len(content.Marks) > 0 {
 				for _, mark := range content.Marks {
 					if mark.Type == "link" {
-						md.WriteString(fmt.Sprintf("[%s](%s)", content.Text, mark.Attrs["href"].(string)))
+						md.WriteString("[" + content.Text + "](" + mark.Attrs["href"].(string) + ")")
 					}
 				}
 			} else {
@@ -46,7 +45,7 @@ func handleParagraph(block ADFBlock) string {
 	return md.String()
 }
 
-func handleTable(block ADFBlock) string {
+func handleTable(block *ADFBlock) string {
 	var md strings.Builder
 	// Your code to handle tables
 	md.WriteString("|")

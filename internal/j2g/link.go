@@ -7,15 +7,16 @@ import (
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
 	gitlab "github.com/xanzy/go-gitlab"
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/gitlabx"
+	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/jirax"
 )
 
-type IssueLink struct {
-	jiraIssue   *jira.Issue
+type JiraIssueLink struct {
+	*jirax.Issue
 	gitlabIssue *gitlab.Issue
 }
 
-type EpicLink struct {
-	jiraIssue  *jira.Issue
+type JiraEpicLink struct {
+	*jirax.Issue
 	gitlabEpic *gitlab.Epic
 }
 
@@ -36,31 +37,43 @@ func convertLinkType(linkType string) *string {
 	}
 }
 
-func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*EpicLink, issueLinks map[string]*IssueLink) {
+func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*JiraEpicLink, issueLinks map[string]*JiraIssueLink) {
 	//* Jira Issue Parent -> GitLab Epic
-	for _, issueLink := range issueLinks {
-		pid := fmt.Sprintf("%d", issueLink.gitlabIssue.ProjectID)
-		gitlabIssue, jiraIssue := issueLink.gitlabIssue, issueLink.jiraIssue
+	//* Jira Subtask Parent -> GitLab Issue // 단 이 경우, block link를 건다.
+	for _, jiraIssue := range issueLinks {
+		pid := fmt.Sprintf("%d", jiraIssue.gitlabIssue.ProjectID)
 
 		// Jira는 Epic의 부모 Epic이 없고, GitLab은 Epic이 다른 Epic의 부모가 될 수 있다.
 		if jiraIssue.Fields.Parent != nil {
-			if _, ok := epicLinks[jiraIssue.Fields.Parent.Key]; ok {
-				_, _, err := gl.Issues.UpdateIssue(pid, gitlabIssue.IID, &gitlab.UpdateIssueOptions{
-					EpicID: &epicLinks[jiraIssue.Fields.Parent.Key].gitlabEpic.ID,
+			parentKey := jiraIssue.Fields.Parent.Key
+			if parentEpicLink, ok := epicLinks[parentKey]; ok {
+				_, _, err := gl.Issues.UpdateIssue(pid, jiraIssue.gitlabIssue.IID, &gitlab.UpdateIssueOptions{
+					EpicID: &parentEpicLink.gitlabEpic.ID,
 				})
 				if err != nil {
 					log.Fatalf("Error adding GitLab epic parent: %s", err)
+				}
+			} else if parentIssueLink, ok := issueLinks[parentKey]; ok {
+				// TODO!!!
+				parentIssueIID := fmt.Sprintf("%d", parentIssueLink.gitlabIssue.IID)
+				_, _, err := gl.IssueLinks.CreateIssueLink(pid, jiraIssue.gitlabIssue.IID, &gitlab.CreateIssueLinkOptions{
+					// IID: &issueLinks[innerIssueLink.OutwardIssue.Key].gitlabIssue.IID,
+					TargetProjectID: gitlab.String(pid),
+					TargetIssueIID:  gitlab.String(parentIssueIID),
+					LinkType:        gitlab.String("blocks"),
+				})
+				if err != nil {
+					log.Fatalf("Error creating GitLab issue link: %s", err)
 				}
 			}
 		}
 	}
 
 	//* Link Issue with other issues
-	for _, issueLink := range issueLinks {
-		pid := fmt.Sprintf("%d", issueLink.gitlabIssue.ProjectID)
-		gitlabIssue, jiraIssue := issueLink.gitlabIssue, issueLink.jiraIssue
+	for _, jiraIssue := range issueLinks {
+		pid := fmt.Sprintf("%d", jiraIssue.gitlabIssue.ProjectID)
 
-		if issueLink.jiraIssue.Fields.IssueLinks != nil {
+		if jiraIssue.Fields.IssueLinks != nil {
 			for _, innerIssueLink := range jiraIssue.Fields.IssueLinks {
 				outwardIssue := innerIssueLink.OutwardIssue
 				outwardType := innerIssueLink.Type.Name
@@ -74,7 +87,7 @@ func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*EpicLink, is
 				if outwardIssue != nil {
 					if _, ok := issueLinks[outwardIssue.Key]; ok {
 						targetIssueIID := fmt.Sprintf("%d", issueLinks[outwardIssue.Key].gitlabIssue.IID)
-						_, _, err := gl.IssueLinks.CreateIssueLink(pid, gitlabIssue.IID, &gitlab.CreateIssueLinkOptions{
+						_, _, err := gl.IssueLinks.CreateIssueLink(pid, jiraIssue.gitlabIssue.IID, &gitlab.CreateIssueLinkOptions{
 							// IID: &issueLinks[innerIssueLink.OutwardIssue.Key].gitlabIssue.IID,
 							TargetProjectID: &pid,
 							TargetIssueIID:  &targetIssueIID,
@@ -90,11 +103,10 @@ func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*EpicLink, is
 	}
 
 	//* Link Epic with other epics
-	for _, epicLink := range epicLinks {
-		gid := fmt.Sprintf("%d", epicLink.gitlabEpic.GroupID)
-		gitlabEpic, jiraIssue := epicLink.gitlabEpic, epicLink.jiraIssue
+	for _, jiraIssue := range epicLinks {
+		gid := fmt.Sprintf("%d", jiraIssue.gitlabEpic.GroupID)
 
-		if epicLink.jiraIssue.Fields.IssueLinks != nil {
+		if jiraIssue.Fields.IssueLinks != nil {
 			for _, innerIssueLink := range jiraIssue.Fields.IssueLinks {
 				outwardIssue := innerIssueLink.OutwardIssue
 				outwardType := innerIssueLink.Type.Name
@@ -107,7 +119,7 @@ func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*EpicLink, is
 				if outwardIssue != nil {
 					if _, ok := epicLinks[outwardIssue.Key]; ok {
 						targetEpicIID := fmt.Sprintf("%d", epicLinks[outwardIssue.Key].gitlabEpic.IID)
-						_, _, err := gitlabx.CreateEpicLink(gl, gid, gitlabEpic.IID, &gitlabx.CreateEpicLinkOptions{
+						_, _, err := gitlabx.CreateEpicLink(gl, gid, jiraIssue.gitlabEpic.IID, &gitlabx.CreateEpicLinkOptions{
 							TargetGroupID: &gid,
 							TargetEpicIID: &targetEpicIID,
 							LinkType:      convertLinkType(outwardType),

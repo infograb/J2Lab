@@ -1,14 +1,20 @@
 package jirax
 
 import (
+	"context"
+
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
 )
 
-func Unpaginate[T any](
+func UnpaginateIssue(
 	jr *jira.Client,
-	jiraAPIFunction func(searchOptions *jira.SearchOptions) ([]T, *jira.Response, error),
-) ([]T, error) {
-	var result []T
+	jql string,
+) ([]*Issue, error) {
+
+	issueService := IssueService{client: jr}
+
+	var result []*Issue
+
 	searchOptions := &jira.SearchOptions{
 		StartAt:    0,
 		MaxResults: 100,
@@ -16,16 +22,23 @@ func Unpaginate[T any](
 	}
 
 	for {
-		items, _, err := jiraAPIFunction(searchOptions)
+		items, r, err := issueService.Search(context.Background(), jql, searchOptions)
 		if err != nil {
 			return nil, err
 		}
 
-		if len(items) == 0 {
+		for _, item := range items {
+			result = append(result, &item)
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		if r.StartAt+r.MaxResults >= r.Total {
 			break
 		}
 
-		result = append(result, items...)
 		searchOptions.StartAt += len(items)
 	}
 

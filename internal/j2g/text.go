@@ -9,10 +9,11 @@ import (
 	gitlab "github.com/xanzy/go-gitlab"
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/adf"
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/config"
+	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/jirax"
 )
 
 // comment -> comments : GitLab 작성자는 API owner이지만, 텍스트로 Jira 작성자를 표현
-func convertToGitLabComment(issueKey string, jiraComment *jira.Comment) *gitlab.CreateIssueNoteOptions {
+func convertToGitLabComment(jr *jira.Client, issueKey string, jiraComment *jirax.Comment) *gitlab.CreateIssueNoteOptions {
 	created, err := time.Parse("2006-01-02T15:04:05.000-0700", jiraComment.Created)
 	if err != nil {
 		log.Fatalf("Error parsing time: %s", err)
@@ -22,8 +23,9 @@ func convertToGitLabComment(issueKey string, jiraComment *jira.Comment) *gitlab.
 
 	commentLink := fmt.Sprintf("%s/browse/%s?focusedCommentId=%s", cfg.Jira.Host, issueKey, jiraComment.ID)
 	dateFormat := fmt.Sprintf("%s at %s", created.Format("January 02, 2006"), created.Format("3:04 PM"))
+	formatedBody := formatDescription(jr, issueKey, jiraComment.Body)
 	body := fmt.Sprintf("%s\n\n%s by %s [[Original](%s)]",
-		jiraComment.Body, dateFormat, jiraComment.Author.DisplayName, commentLink)
+		formatedBody, dateFormat, jiraComment.Author.DisplayName, commentLink)
 
 	return &gitlab.CreateIssueNoteOptions{
 		Body:      &body,
@@ -32,13 +34,11 @@ func convertToGitLabComment(issueKey string, jiraComment *jira.Comment) *gitlab.
 }
 
 // TODO: Jira ADF -> GitLab Markdown
-func formatDescription(issueKey string, temp string) *string {
+func formatDescription(jr *jira.Client, issueKey string, content *adf.ADF) *string {
 	cfg := config.GetConfig()
-	description, err := adf.GetIssueDescriptionADF(issueKey)
-	if err != nil {
-		log.Fatalf("Error getting issue description: %s", err)
-	}
-	markdownDescription := adf.AdfToMarkdown(description.Content)
+
+	adfBlock := content.Content
+	markdownDescription := adf.AdfToMarkdown(adfBlock)
 	result := fmt.Sprintf("%s\n\nImported from Jira [%s](%s/browse/%s)", markdownDescription, issueKey, cfg.Jira.Host, issueKey)
 	return &result
 }
