@@ -20,9 +20,9 @@ func parseID(id interface{}) (string, error) {
 
 func Unpaginate[T any](
 	gl *gitlab.Client,
-	function func(opt *gitlab.ListOptions) ([]*T, *gitlab.Response, error),
+	gitlabAPIFunction func(opt *gitlab.ListOptions) ([]*T, *gitlab.Response, error),
 ) ([]*T, error) {
-	var items []*T
+	var result []*T
 	page := 1
 	perPage := 100
 
@@ -32,12 +32,12 @@ func Unpaginate[T any](
 			PerPage: perPage,
 		}
 
-		ts, resp, err := function(opt)
+		items, resp, err := gitlabAPIFunction(opt)
 		if err != nil {
 			return nil, err
 		}
 
-		items = append(items, ts...)
+		result = append(result, items...)
 
 		if resp.CurrentPage >= resp.TotalPages {
 			break
@@ -46,5 +46,5 @@ func Unpaginate[T any](
 		page = resp.NextPage
 	}
 
-	return items, nil
+	return result, nil
 }

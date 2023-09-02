@@ -9,30 +9,10 @@ import (
 	gitlab "github.com/xanzy/go-gitlab"
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/config"
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/gitlabx"
+	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/jirax"
 )
 
-func paginateJiraIssues(jr *jira.Client, jql string, convertFunc func(jira.Issue)) {
-	startIndex := 0
-	for {
-		issues, _, err := jr.Issue.Search(context.Background(), jql, &jira.SearchOptions{
-			StartAt: startIndex,
-			Fields:  []string{"*all"},
-		})
-		if err != nil {
-			log.Fatalf("Error getting Jira issues: %s", err)
-		}
-
-		if len(issues) == 0 {
-			break
-		}
-
-		for _, issue := range issues {
-			convertFunc(issue)
-		}
-		startIndex += len(issues)
-	}
-}
-
+// ! Entry
 func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 	cfg := config.GetConfig()
 
@@ -53,9 +33,16 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 	log.Infof("Jira project: %s", jiraProject.Name)
 	log.Infof("GitLab project: %s", gitlabProject.Name)
 
+	//* Project Description
+	_, _, err = gl.Projects.EditProject(gitlabProjectPath, &gitlab.EditProjectOptions{
+		Description: gitlab.String(jiraProject.Description),
+	})
+	if err != nil {
+		log.Fatalf("Error editing GitLab project: %s", err)
+	}
+
 	//* Project Milestones
 	//* Sensitive to the title
-
 	existingMilestones, err := gitlabx.Unpaginate[gitlab.Milestone](gl, func(opt *gitlab.ListOptions) ([]*gitlab.Milestone, *gitlab.Response, error) {
 		return gl.Milestones.ListMilestones(gitlabProject.ID, &gitlab.ListMilestonesOptions{ListOptions: *opt})
 	})
@@ -78,14 +65,6 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 		}
 	}
 
-	//* Project Description
-	_, _, err = gl.Projects.EditProject(gitlabProjectPath, &gitlab.EditProjectOptions{
-		Description: gitlab.String(jiraProject.Description),
-	})
-	if err != nil {
-		log.Fatalf("Error editing GitLab project: %s", err)
-	}
-
 	var prefixJql string
 	if cfg.Project.Jira.Jql != "" {
 		prefixJql = fmt.Sprintf("(%s) AND", cfg.Project.Jira.Jql)
@@ -98,19 +77,33 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 
 	//* Epic
 	epicJql := fmt.Sprintf("%s project=%s AND type = Epic Order by key ASC", prefixJql, jiraProjectID)
-	paginateJiraIssues(jr, epicJql, func(jiraIssue jira.Issue) {
-		log.Infof("Converting epic: %s", jiraIssue.Key)
-		gitlabEpic := ConvertJiraIssueToGitLabEpic(gl, jr, &jiraIssue)
-		epicLinks[jiraIssue.Key] = &EpicLink{&jiraIssue, gitlabEpic}
+	jiraEpics, err := jirax.Unpaginate[jira.Issue](jr, func(searchOptions *jira.SearchOptions) ([]jira.Issue, *jira.Response, error) {
+		return jr.Issue.Search(context.Background(), epicJql, searchOptions)
 	})
+	if err != nil {
+		log.Fatalf("Error getting Jira issues for GitLab Epics: %s", err)
+	}
+
+	for _, jiraEpic := range jiraEpics {
+		log.Infof("Converting epic: %s", jiraEpic.Key)
+		gitlabEpic := ConvertJiraIssueToGitLabEpic(gl, jr, &jiraEpic)
+		epicLinks[jiraEpic.Key] = &EpicLink{&jiraEpic, gitlabEpic}
+	}
 
 	//* Issue
 	issueJql := fmt.Sprintf("%s project=%s AND type != Epic Order by key ASC", prefixJql, jiraProjectID)
-	paginateJiraIssues(jr, issueJql, func(jiraIssue jira.Issue) {
+	jiraIssues, err := jirax.Unpaginate[jira.Issue](jr, func(searchOptions *jira.SearchOptions) ([]jira.Issue, *jira.Response, error) {
+		return jr.Issue.Search(context.Background(), issueJql, searchOptions)
+	})
+	if err != nil {
+		log.Fatalf("Error getting Jira issues for GitLab Issues: %s", err)
+	}
+
+	for _, jiraIssue := range jiraIssues {
 		log.Infof("Converting issue: %s", jiraIssue.Key)
 		gitlabIssue := ConvertJiraIssueToGitLabIssue(gl, jr, &jiraIssue)
 		issueLinks[jiraIssue.Key] = &IssueLink{&jiraIssue, gitlabIssue}
-	})
+	}
 
 	//* Link
 	Link(gl, jr, epicLinks, issueLinks)
