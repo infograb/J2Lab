@@ -4,10 +4,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	configCmd "gitlab.com/infograb/team/devops/toy/gos/boilerplate/cmd/jira2gitlab/config"
-	runCmd "gitlab.com/infograb/team/devops/toy/gos/boilerplate/cmd/jira2gitlab/run"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/cmd/jira2gitlab/version"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/utils"
+	configCmd "gitlab.com/infograb/team/devops/toy/j2lab/cmd/jira2gitlab/config"
+	runCmd "gitlab.com/infograb/team/devops/toy/j2lab/cmd/jira2gitlab/run"
+	"gitlab.com/infograb/team/devops/toy/j2lab/cmd/jira2gitlab/version"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/utils"
 )
 
 var (

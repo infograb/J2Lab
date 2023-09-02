@@ -6,10 +6,10 @@ import (
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
 	log "github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/config"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/gitlabx"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/jirax"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/utils"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/config"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/gitlabx"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/jirax"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/utils"
 )
 
 func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue *jirax.Issue, userMap UserMap) *gitlab.Epic {

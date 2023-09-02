@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/utils"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/utils"
 )
 
 const (

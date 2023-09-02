@@ -2,9 +2,9 @@ package run
 
 import (
 	"github.com/spf13/cobra"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/config"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/j2g"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/utils"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/config"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/j2g"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/utils"
 )
 
 type Options struct {

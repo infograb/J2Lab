@@ -7,9 +7,9 @@ import (
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
 	log "github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/adf"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/config"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/jirax"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/adf"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/config"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/jirax"
 )
 
 // comment -> comments : GitLab 작성자는 API owner이지만, 텍스트로 Jira 작성자를 표현

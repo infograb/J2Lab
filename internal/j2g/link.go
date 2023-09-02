@@ -6,8 +6,8 @@ import (
 
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
 	gitlab "github.com/xanzy/go-gitlab"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/gitlabx"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/jirax"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/gitlabx"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/jirax"
 )
 
 type JiraIssueLink struct {

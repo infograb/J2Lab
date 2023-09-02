@@ -9,7 +9,7 @@ import (
 
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
 	"github.com/trivago/tgo/tcontainer"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/adf"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/adf"
 )
 
 type SearchResult struct {

@@ -6,9 +6,9 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/config"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/j2g"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/utils"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/config"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/j2g"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/utils"
 )
 
 func NewCmdNewUser(ioStreams *utils.IOStreams) *cobra.Command {

@@ -7,9 +7,9 @@ import (
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
 	log "github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/config"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/gitlabx"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/jirax"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/config"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/gitlabx"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/jirax"
 )
 
 type UserMap map[string]*gitlab.User // Jria Account ID to GitLab ID

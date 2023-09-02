@@ -2,8 +2,8 @@ package config
 
 import (
 	"github.com/spf13/cobra"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/config"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/utils"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/config"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/utils"
 )
 
 func newCmdConfigLint(ioStreams *utils.IOStreams) *cobra.Command {

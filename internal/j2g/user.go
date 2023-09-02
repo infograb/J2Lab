@@ -4,7 +4,7 @@ import (
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
 	log "github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/jirax"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/jirax"
 )
 
 func newUserMap(gl *gitlab.Client, jiraIssues []*jirax.Issue, users map[string]int) UserMap {
