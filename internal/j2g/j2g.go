@@ -12,29 +12,11 @@ import (
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/jirax"
 )
 
-type UserMap map[string]*gitlab.User
+type UserMap map[string]*gitlab.User // Jria Account ID to GitLab ID
 
 // ! Entry
 func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 	cfg := config.GetConfig()
-
-	//* User Map
-	//! 병렬 지점
-	userMap := make(UserMap)
-	for jiraEmail, gitlabUsername := range cfg.Users {
-		users, _, err := gl.Users.ListUsers(&gitlab.ListUsersOptions{
-			Username: &gitlabUsername,
-		})
-		if err != nil {
-			log.Fatalf("Error getting GitLab user: %s", err)
-		}
-
-		if len(users) == 0 {
-			log.Fatalf("No User found, gitlab: %s, jira: %s", gitlabUsername, jiraEmail)
-		}
-
-		userMap[jiraEmail] = users[0]
-	}
 
 	//* Get Project Information
 	jiraProjectID := cfg.Project.Jira.Name
@@ -50,8 +32,36 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 		log.Fatalf("Error getting GitLab project: %s", err)
 	}
 
-	log.Infof("Jira project: %s", jiraProject.Name)
-	log.Infof("GitLab project: %s", gitlabProject.Name)
+	//* JQL
+	var prefixJql string
+	if cfg.Project.Jira.Jql != "" {
+		prefixJql = fmt.Sprintf("(%s) AND", cfg.Project.Jira.Jql)
+	} else {
+		prefixJql = ""
+	}
+
+	//* Get Jira Issues for Epic
+	epicLinks := make(map[string]*EpicLink)
+	epicJql := fmt.Sprintf("%s project=%s AND type = Epic Order by key ASC", prefixJql, jiraProjectID)
+	jiraEpics, err := jirax.Unpaginate[jira.Issue](jr, func(searchOptions *jira.SearchOptions) ([]jira.Issue, *jira.Response, error) {
+		return jr.Issue.Search(context.Background(), epicJql, searchOptions)
+	})
+	if err != nil {
+		log.Fatalf("Error getting Jira issues for GitLab Epics: %s", err)
+	}
+
+	//* Get Jira Issues for Issue
+	issueLinks := make(map[string]*IssueLink)
+	issueJql := fmt.Sprintf("%s project=%s AND type != Epic Order by key ASC", prefixJql, jiraProjectID)
+	jiraIssues, err := jirax.Unpaginate[jira.Issue](jr, func(searchOptions *jira.SearchOptions) ([]jira.Issue, *jira.Response, error) {
+		return jr.Issue.Search(context.Background(), issueJql, searchOptions)
+	})
+	if err != nil {
+		log.Fatalf("Error getting Jira issues for GitLab Issues: %s", err)
+	}
+
+	//* User Map
+	userMap := newUserMap(gl, append(jiraEpics, jiraIssues...))
 
 	//* Project Description
 	_, _, err = gl.Projects.EditProject(gitlabProjectPath, &gitlab.EditProjectOptions{
@@ -85,25 +95,7 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 		}
 	}
 
-	var prefixJql string
-	if cfg.Project.Jira.Jql != "" {
-		prefixJql = fmt.Sprintf("(%s) AND", cfg.Project.Jira.Jql)
-	} else {
-		prefixJql = ""
-	}
-
-	epicLinks := make(map[string]*EpicLink)
-	issueLinks := make(map[string]*IssueLink)
-
 	//* Epic
-	epicJql := fmt.Sprintf("%s project=%s AND type = Epic Order by key ASC", prefixJql, jiraProjectID)
-	jiraEpics, err := jirax.Unpaginate[jira.Issue](jr, func(searchOptions *jira.SearchOptions) ([]jira.Issue, *jira.Response, error) {
-		return jr.Issue.Search(context.Background(), epicJql, searchOptions)
-	})
-	if err != nil {
-		log.Fatalf("Error getting Jira issues for GitLab Epics: %s", err)
-	}
-
 	for _, jiraEpic := range jiraEpics {
 		log.Infof("Converting epic: %s", jiraEpic.Key)
 		gitlabEpic := ConvertJiraIssueToGitLabEpic(gl, jr, &jiraEpic)
@@ -111,14 +103,6 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 	}
 
 	//* Issue
-	issueJql := fmt.Sprintf("%s project=%s AND type != Epic Order by key ASC", prefixJql, jiraProjectID)
-	jiraIssues, err := jirax.Unpaginate[jira.Issue](jr, func(searchOptions *jira.SearchOptions) ([]jira.Issue, *jira.Response, error) {
-		return jr.Issue.Search(context.Background(), issueJql, searchOptions)
-	})
-	if err != nil {
-		log.Fatalf("Error getting Jira issues for GitLab Issues: %s", err)
-	}
-
 	for _, jiraIssue := range jiraIssues {
 		log.Infof("Converting issue: %s", jiraIssue.Key)
 		gitlabIssue := ConvertJiraIssueToGitLabIssue(gl, jr, &jiraIssue, userMap)

@@ -10,7 +10,7 @@ func Unpaginate[T any](
 ) ([]T, error) {
 	var result []T
 	searchOptions := &jira.SearchOptions{
-		StartAt:    1,
+		StartAt:    0,
 		MaxResults: 100,
 	}
 
