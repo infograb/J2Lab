@@ -9,19 +9,17 @@ import (
 
 var jiraClient *jira.Client
 
-func GetJiraClient() *jira.Client {
+func GetJiraClient(jiraConfig Jira) *jira.Client {
 	if jiraClient != nil {
 		return jiraClient
 	}
 
-	cfg := GetConfig()
-
 	tp := jira.BasicAuthTransport{
-		Username: cfg.Jira.Email,
-		APIToken: cfg.Jira.Token,
+		Username: jiraConfig.Email,
+		APIToken: jiraConfig.Token,
 	}
 
-	client, err := jira.NewClient(cfg.Jira.Host, tp.Client())
+	client, err := jira.NewClient(jiraConfig.Host, tp.Client())
 	if err != nil {
 		log.Fatalf("Error creating Jira client: %s", err)
 	}

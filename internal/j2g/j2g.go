@@ -14,6 +14,36 @@ import (
 
 type UserMap map[string]*gitlab.User // Jria Account ID to GitLab ID
 
+func GetJiraIssues(jr *jira.Client, jiraProjectID string, jql string) ([]jira.Issue, []jira.Issue) {
+	//* JQL
+	var prefixJql string
+	if jql != "" {
+		prefixJql = fmt.Sprintf("(%s) AND", jql)
+	} else {
+		prefixJql = ""
+	}
+
+	//* Get Jira Issues for Epic
+	epicJql := fmt.Sprintf("%s project=%s AND type = Epic Order by key ASC", prefixJql, jiraProjectID)
+	jiraEpics, err := jirax.Unpaginate[jira.Issue](jr, func(searchOptions *jira.SearchOptions) ([]jira.Issue, *jira.Response, error) {
+		return jr.Issue.Search(context.Background(), epicJql, searchOptions)
+	})
+	if err != nil {
+		log.Fatalf("Error getting Jira issues for GitLab Epics: %s", err)
+	}
+
+	//* Get Jira Issues for Issue
+	issueJql := fmt.Sprintf("%s project=%s AND type != Epic Order by key ASC", prefixJql, jiraProjectID)
+	jiraIssues, err := jirax.Unpaginate[jira.Issue](jr, func(searchOptions *jira.SearchOptions) ([]jira.Issue, *jira.Response, error) {
+		return jr.Issue.Search(context.Background(), issueJql, searchOptions)
+	})
+	if err != nil {
+		log.Fatalf("Error getting Jira issues for GitLab Issues: %s", err)
+	}
+
+	return jiraEpics, jiraIssues
+}
+
 // ! Entry
 func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 	cfg := config.GetConfig()
@@ -32,36 +62,11 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 		log.Fatalf("Error getting GitLab project: %s", err)
 	}
 
-	//* JQL
-	var prefixJql string
-	if cfg.Project.Jira.Jql != "" {
-		prefixJql = fmt.Sprintf("(%s) AND", cfg.Project.Jira.Jql)
-	} else {
-		prefixJql = ""
-	}
-
-	//* Get Jira Issues for Epic
-	epicLinks := make(map[string]*EpicLink)
-	epicJql := fmt.Sprintf("%s project=%s AND type = Epic Order by key ASC", prefixJql, jiraProjectID)
-	jiraEpics, err := jirax.Unpaginate[jira.Issue](jr, func(searchOptions *jira.SearchOptions) ([]jira.Issue, *jira.Response, error) {
-		return jr.Issue.Search(context.Background(), epicJql, searchOptions)
-	})
-	if err != nil {
-		log.Fatalf("Error getting Jira issues for GitLab Epics: %s", err)
-	}
-
-	//* Get Jira Issues for Issue
-	issueLinks := make(map[string]*IssueLink)
-	issueJql := fmt.Sprintf("%s project=%s AND type != Epic Order by key ASC", prefixJql, jiraProjectID)
-	jiraIssues, err := jirax.Unpaginate[jira.Issue](jr, func(searchOptions *jira.SearchOptions) ([]jira.Issue, *jira.Response, error) {
-		return jr.Issue.Search(context.Background(), issueJql, searchOptions)
-	})
-	if err != nil {
-		log.Fatalf("Error getting Jira issues for GitLab Issues: %s", err)
-	}
+	//* Get Jira Issues
+	jiraEpics, jiraIssues := GetJiraIssues(jr, jiraProjectID, cfg.Project.Jira.Jql)
 
 	//* User Map
-	userMap := newUserMap(gl, append(jiraEpics, jiraIssues...))
+	userMap := newUserMap(gl, append(jiraEpics, jiraIssues...), cfg.Users)
 
 	//* Project Description
 	_, _, err = gl.Projects.EditProject(gitlabProjectPath, &gitlab.EditProjectOptions{
@@ -94,6 +99,9 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 			createMilestoneFromJiraVersion(jr, gl, gitlabProject.ID, &version)
 		}
 	}
+
+	epicLinks := make(map[string]*EpicLink)
+	issueLinks := make(map[string]*IssueLink)
 
 	//* Epic
 	for _, jiraEpic := range jiraEpics {

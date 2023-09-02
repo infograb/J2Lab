@@ -2,20 +2,11 @@ package config
 
 import (
 	"github.com/spf13/cobra"
+	newCmd "gitlab.com/infograb/team/devops/toy/gos/boilerplate/cmd/jira2gitlab/config/new"
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/utils"
 )
 
-type Options struct {
-	utils.IOStreams
-}
-
-func NewOptions(ioStreams utils.IOStreams) *Options {
-	return &Options{
-		IOStreams: ioStreams,
-	}
-}
-
-func NewCmdConfig(ioStreams utils.IOStreams) *cobra.Command {
+func NewCmdConfig(ioStreams *utils.IOStreams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config SUBCOMMAND [options]",
 		Short: "Modify config files",
@@ -23,7 +14,7 @@ func NewCmdConfig(ioStreams utils.IOStreams) *cobra.Command {
 	}
 
 	cmd.AddCommand(
-		newCmdConfigNew(ioStreams),
+		newCmd.NewCmdNew(ioStreams),
 		newCmdConfigLint(ioStreams),
 	)
 

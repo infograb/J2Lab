@@ -8,16 +8,16 @@ import (
 )
 
 type Options struct {
-	utils.IOStreams
+	*utils.IOStreams
 }
 
-func NewOptions(ioStreams utils.IOStreams) *Options {
+func NewOptions(ioStreams *utils.IOStreams) *Options {
 	return &Options{
 		IOStreams: ioStreams,
 	}
 }
 
-func NewCmdRun(ioStreams utils.IOStreams) *cobra.Command {
+func NewCmdRun(ioStreams *utils.IOStreams) *cobra.Command {
 	o := NewOptions(ioStreams)
 	cmd := &cobra.Command{
 		Use:   "run [options]",
@@ -42,8 +42,10 @@ func (o *Options) validate() error {
 }
 
 func (o *Options) run() error {
-	gl := config.GetGitLabClient()
-	jr := config.GetJiraClient()
+	cfg := config.GetConfig()
+
+	gl := config.GetGitLabClient(cfg.GitLab)
+	jr := config.GetJiraClient(cfg.Jira)
 	j2g.ConvertByProject(gl, jr)
 
 	return nil

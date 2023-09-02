@@ -7,7 +7,6 @@ import (
 	configCmd "gitlab.com/infograb/team/devops/toy/gos/boilerplate/cmd/jira2gitlab/config"
 	runCmd "gitlab.com/infograb/team/devops/toy/gos/boilerplate/cmd/jira2gitlab/run"
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/cmd/jira2gitlab/version"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/config"
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/utils"
 )
 
@@ -25,8 +24,6 @@ var (
 )
 
 func init() {
-	cobra.OnInitialize(config.InitConfig)
-
 	ioStreams := utils.NewStdIOStreams()
 	log.SetOutput(ioStreams.ErrOut)
 	log.SetLevel(log.DebugLevel) // TODO Set log level from flag

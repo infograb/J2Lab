@@ -15,8 +15,8 @@ type IOStreams struct {
 	ErrOut io.Writer
 }
 
-func NewStdIOStreams() IOStreams {
-	return IOStreams{
+func NewStdIOStreams() *IOStreams {
+	return &IOStreams{
 		In:     os.Stdin,
 		Out:    os.Stdout,
 		ErrOut: os.Stderr,
@@ -24,12 +24,12 @@ func NewStdIOStreams() IOStreams {
 }
 
 // NewTestIOStreams returns a valid IOStreams and in, out, errout buffers for unit tests
-func NewTestIOStreams() (IOStreams, *bytes.Buffer, *bytes.Buffer, *bytes.Buffer) {
+func NewTestIOStreams() (*IOStreams, *bytes.Buffer, *bytes.Buffer, *bytes.Buffer) {
 	in := &bytes.Buffer{}
 	out := &bytes.Buffer{}
 	errOut := &bytes.Buffer{}
 
-	return IOStreams{
+	return &IOStreams{
 		In:     in,
 		Out:    out,
 		ErrOut: errOut,
