@@ -102,7 +102,7 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 	//* Epic
 	for _, jiraEpic := range jiraEpics {
 		log.Infof("Converting epic: %s", jiraEpic.Key)
-		gitlabEpic := ConvertJiraIssueToGitLabEpic(gl, jr, jiraEpic)
+		gitlabEpic := ConvertJiraIssueToGitLabEpic(gl, jr, jiraEpic, userMap)
 		epicLinks[jiraEpic.Key] = &JiraEpicLink{jiraEpic, gitlabEpic}
 	}
 

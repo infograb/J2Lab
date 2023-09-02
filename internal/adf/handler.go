@@ -20,13 +20,13 @@ func handleBulletList(block *ADFBlock) string {
 	return md.String()
 }
 
-func handleParagraph(block *ADFBlock) string {
+func handleParagraph(block *ADFBlock, userMap UserMap) string {
 	var md strings.Builder
 	for _, content := range block.Content {
 		switch content.Type {
 		case "mention":
-			// TODO: Jira Username -> GitLab Username 으로 변경 필요, 현재는 Jira Username으로 진행됨
-			md.WriteString(content.Attrs["text"].(string))
+			username := userMap[content.Attrs["id"].(string)].Username
+			md.WriteString("@" + username)
 		case "text":
 			if len(content.Marks) > 0 {
 				for _, mark := range content.Marks {
@@ -41,7 +41,7 @@ func handleParagraph(block *ADFBlock) string {
 			md.WriteString("\n")
 		}
 	}
-	md.WriteString("\n")
+	md.WriteString("\n\n")
 	return md.String()
 }
 

@@ -3,10 +3,14 @@ package adf
 import (
 	"fmt"
 	"strings"
+
+	"github.com/xanzy/go-gitlab"
 )
 
-func AdfToMarkdown(blocks []*ADFBlock) string {
+// Jira Account ID -> GitLab
+type UserMap map[string]*gitlab.User
 
+func AdfToMarkdown(blocks []*ADFBlock, userMap UserMap) string {
 	var md strings.Builder
 
 	for _, block := range blocks {
@@ -33,7 +37,7 @@ func AdfToMarkdown(blocks []*ADFBlock) string {
 		case "panel":
 			md.WriteString("> " + block.Text + "\n")
 		case "paragraph":
-			md.WriteString(handleParagraph(block))
+			md.WriteString(handleParagraph(block, userMap))
 		case "rule":
 			md.WriteString("---\n")
 		case "table":
