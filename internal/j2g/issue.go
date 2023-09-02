@@ -9,7 +9,7 @@ import (
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/config"
 )
 
-func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue *jira.Issue) *gitlab.Issue {
+func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue *jira.Issue, userMap UserMap) *gitlab.Issue {
 	cfg := config.GetConfig()
 	pid := cfg.Project.GitLab.Issue
 
@@ -22,10 +22,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 	}
 
 	//* Assignee
-	assignee, err := convertJiraUserToGitLabUser(gl, jiraIssue.Fields.Assignee)
-	if err != nil {
-		log.Fatalf("Error converting jira user to gitlab user: %s", err)
-	} else if assignee != nil {
+	if assignee, ok := userMap[jiraIssue.Fields.Assignee.EmailAddress]; ok {
 		gitlabCreateIssueOptions.AssigneeIDs = &[]int{assignee.ID}
 	}
 

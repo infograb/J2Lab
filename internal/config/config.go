@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -48,7 +49,7 @@ type Config struct {
 		} `yaml:"gitlab"`
 	} `yaml:"project"`
 
-	Users map[string]string `yaml:"users"`
+	Users map[string]int `yaml:"users"`
 }
 
 var cfg *Config
@@ -60,7 +61,7 @@ func capitalizeJiraProject(cfg *Config) {
 
 }
 
-func parseUsers() map[string]string {
+func parseUsers() map[string]int {
 	pwd, err := os.Getwd()
 	if err != nil {
 		log.Fatalf("Error getting home directory: %s", err)
@@ -72,7 +73,7 @@ func parseUsers() map[string]string {
 	}
 	defer file.Close()
 
-	userMap := make(map[string]string)
+	userMap := make(map[string]int)
 
 	// Read the file line by line
 	scanner := bufio.NewScanner(file)
@@ -82,7 +83,13 @@ func parseUsers() map[string]string {
 		parts := strings.Split(line, ",")
 		if len(parts) == 2 {
 			key := strings.TrimSpace(parts[0])
-			value := strings.TrimSpace(parts[1])
+			valueStr := strings.TrimSpace(parts[1])
+
+			value, err := strconv.Atoi(valueStr)
+			if err != nil {
+				log.Fatal("Error parsing user ID: users.csv must be in the format of <Jira Account ID>,<GitLab User ID>")
+			}
+
 			userMap[key] = value
 		}
 	}
