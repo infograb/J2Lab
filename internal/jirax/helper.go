@@ -6,41 +6,41 @@ import (
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
 )
 
-type JiraIssue struct {
-	*jira.Issue
-	*jira.IssueFields
-}
-
 func UnpaginateIssue(
 	jr *jira.Client,
 	jql string,
-) ([]*jira.Issue, *jira.Response, error) {
-	var result []*jira.Issue
+) ([]*Issue, error) {
+
+	issueService := IssueService{client: jr}
+
+	var result []*Issue
+
 	searchOptions := &jira.SearchOptions{
 		StartAt:    0,
 		MaxResults: 100,
 		Fields:     []string{"*all"},
 	}
 
-	var res *jira.Response
 	for {
-		items, r, err := jr.Issue.Search(context.Background(), jql, searchOptions)
+		items, r, err := issueService.Search(context.Background(), jql, searchOptions)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 
 		for _, item := range items {
 			result = append(result, &item)
 		}
 
-		searchOptions.StartAt += len(items)
+		if err != nil {
+			return nil, err
+		}
 
 		if r.StartAt+r.MaxResults >= r.Total {
 			break
 		}
 
-		res = r
+		searchOptions.StartAt += len(items)
 	}
 
-	return result, res, nil
+	return result, nil
 }

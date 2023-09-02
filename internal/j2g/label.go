@@ -6,10 +6,11 @@ import (
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
 	log "github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
+	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/jirax"
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/utils"
 )
 
-func convertJiraToGitLabLabels(gl *gitlab.Client, jr *jira.Client, id interface{}, jiraIssue *jira.Issue, isGroup bool) *gitlab.Labels {
+func convertJiraToGitLabLabels(gl *gitlab.Client, jr *jira.Client, id interface{}, jiraIssue *jirax.Issue, isGroup bool) *gitlab.Labels {
 	labels := jiraIssue.Fields.Labels
 
 	//* Issue Type
