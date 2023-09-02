@@ -7,14 +7,12 @@ import (
 
 var gitlabClient *gitlab.Client
 
-func GetGitLabClient() *gitlab.Client {
+func GetGitLabClient(gitlabConfig GitLab) *gitlab.Client {
 	if gitlabClient != nil {
 		return gitlabClient
 	}
 
-	cfg := GetConfig()
-
-	client, err := gitlab.NewClient(cfg.GitLab.Token, gitlab.WithBaseURL(cfg.GitLab.Host))
+	client, err := gitlab.NewClient(gitlabConfig.Token, gitlab.WithBaseURL(gitlabConfig.Host))
 	if err != nil {
 		log.Fatalf("Error creating GitLab client: %s", err)
 	}

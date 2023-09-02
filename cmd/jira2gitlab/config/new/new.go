@@ -1,4 +1,4 @@
-package config
+package new
 
 import (
 	"fmt"
@@ -12,8 +12,8 @@ import (
 func NewCmdNew(ioStreams *utils.IOStreams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "new",
-		Short:   "Create the config.yml file",
-		Long:    "Create the config.yml file on the current working directory",
+		Short:   "Create the config.yaml and users.csv file",
+		Long:    "Create the config.yaml and users.csv file on the current working directory",
 		Example: "",
 		Run: func(cmd *cobra.Command, args []string) {
 			utils.CheckErr(runConfigNew(ioStreams))
@@ -24,6 +24,10 @@ func NewCmdNew(ioStreams *utils.IOStreams) *cobra.Command {
 		command.Flags().MarkHidden("config")
 		command.Parent().HelpFunc()(command, strings)
 	})
+
+	cmd.AddCommand(
+		NewCmdNewUser(ioStreams),
+	)
 
 	return cmd
 }

@@ -19,17 +19,21 @@ import (
 // 1. Mapping between config file and struct
 // 2. Configuration syntax validation
 
-type Config struct {
-	GitLab struct {
-		Host  string `yaml:"host" validate:"required,url"`
-		Token string `yaml:"token"`
-	} `yaml:"gitlab" validate:"required"`
+type GitLab struct {
+	Host  string `yaml:"host" validate:"required,url"`
+	Token string `yaml:"token"`
+}
 
-	Jira struct {
-		Host  string `yaml:"host" validate:"required,url"`
-		Email string `yaml:"email" validate:"required,email"`
-		Token string `yaml:"token"`
-	} `yaml:"jira"`
+type Jira struct {
+	Host  string `yaml:"host" validate:"required,url"`
+	Email string `yaml:"email" validate:"required,email"`
+	Token string `yaml:"token"`
+}
+
+type Config struct {
+	GitLab GitLab `yaml:"gitlab" validate:"required"`
+
+	Jira Jira `yaml:"jira"`
 
 	Project struct {
 		Jira struct {
@@ -70,7 +74,7 @@ func GetConfig() *Config {
 		log.Fatalf("Error unmarshalling config: %s", err)
 	}
 
-	cfg.Users = parseUsers()
+	cfg.Users = parseUserCSVs()
 	capitalizeJiraProject(cfg)
 
 	return cfg
@@ -110,7 +114,7 @@ func InitConfig() {
 	log.Debugf("Using config file: %s", viper.ConfigFileUsed())
 }
 
-func parseUsers() map[string]int {
+func parseUserCSVs() map[string]int {
 	pwd, err := os.Getwd()
 	if err != nil {
 		log.Fatalf("Error getting home directory: %s", err)
@@ -130,13 +134,14 @@ func parseUsers() map[string]int {
 	for scanner.Scan() {
 		line := scanner.Text()
 		parts := strings.Split(line, ",")
-		if len(parts) == 2 {
+		if len(parts) == 3 {
 			key := strings.TrimSpace(parts[0])
-			valueStr := strings.TrimSpace(parts[1])
+			_ = strings.TrimSpace(parts[1]) // DisplayName
+			valueStr := strings.TrimSpace(parts[2])
 
 			value, err := strconv.Atoi(valueStr)
 			if err != nil {
-				log.Fatal("Error parsing user ID: users.csv must be in the format of <Jira Account ID>,<GitLab User ID>")
+				log.Fatal("Error parsing user ID: users.csv must be in the format of <Jira Account ID>,<Jira Display Name>,<GitLab User ID>")
 			}
 
 			userMap[key] = value

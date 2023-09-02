@@ -42,8 +42,10 @@ func (o *Options) validate() error {
 }
 
 func (o *Options) run() error {
-	gl := config.GetGitLabClient()
-	jr := config.GetJiraClient()
+	cfg := config.GetConfig()
+
+	gl := config.GetGitLabClient(cfg.GitLab)
+	jr := config.GetJiraClient(cfg.Jira)
 	j2g.ConvertByProject(gl, jr)
 
 	return nil
