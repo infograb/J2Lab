@@ -40,9 +40,13 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 
 	//* Storypoint -> Weight (if custom field is provided)
 	if cfg.Project.Jira.CustomField.StoryPoint != "" {
-		storyPoint := jiraIssue.Fields.Unknowns[cfg.Project.Jira.CustomField.StoryPoint].(float64)
-		storyPointInt := int(storyPoint)
-		gitlabCreateIssueOptions.Weight = &storyPointInt
+		storyPoint, ok := jiraIssue.Fields.Unknowns[cfg.Project.Jira.CustomField.StoryPoint].(float64)
+		if ok {
+			storyPointInt := int(storyPoint)
+			gitlabCreateIssueOptions.Weight = &storyPointInt
+		} else {
+			log.Warnf("Unable to convert story point from Jira issue %s to GitLab weight", jiraIssue.Key)
+		}
 	}
 
 	//* 이슈를 생성합니다.
