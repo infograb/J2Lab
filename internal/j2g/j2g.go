@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/config"
+	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/gitlabx"
 )
 
 func paginateJiraIssues(jr *jira.Client, jql string, convertFunc func(jira.Issue)) {
@@ -53,8 +54,28 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 	log.Infof("GitLab project: %s", gitlabProject.Name)
 
 	//* Project Milestones
+	//* Sensitive to the title
+
+	existingMilestones, err := gitlabx.Paginate[gitlab.Milestone](gl, func(opt *gitlab.ListOptions) ([]*gitlab.Milestone, *gitlab.Response, error) {
+		return gl.Milestones.ListMilestones(gitlabProject.ID, &gitlab.ListMilestonesOptions{ListOptions: *opt})
+	})
+	if err != nil {
+		log.Fatalf("Error getting GitLab milestones from GitLab: %s", err)
+	}
+
 	for _, version := range jiraProject.Versions {
-		createMilestoneFromJiraVersion(jr, gl, gitlabProject.ID, &version)
+		exist := false
+		for _, milestone := range existingMilestones {
+			if milestone.Title == version.Name {
+				log.Infof("Milestone already exists: %s", version.Name)
+				exist = true
+				break
+			}
+		}
+
+		if !exist {
+			createMilestoneFromJiraVersion(jr, gl, gitlabProject.ID, &version)
+		}
 	}
 
 	//* Project Description
