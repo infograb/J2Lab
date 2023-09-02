@@ -22,8 +22,10 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 	}
 
 	//* Assignee
-	if assignee, ok := userMap[jiraIssue.Fields.Assignee.EmailAddress]; ok {
-		gitlabCreateIssueOptions.AssigneeIDs = &[]int{assignee.ID}
+	if jiraIssue.Fields.Assignee != nil {
+		if assignee, ok := userMap[jiraIssue.Fields.Assignee.AccountID]; ok {
+			gitlabCreateIssueOptions.AssigneeIDs = &[]int{assignee.ID}
+		}
 	}
 
 	//* Version -> Milestone
