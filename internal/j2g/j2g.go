@@ -12,9 +12,29 @@ import (
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/jirax"
 )
 
+type UserMap map[string]*gitlab.User
+
 // ! Entry
 func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 	cfg := config.GetConfig()
+
+	//* User Map
+	//! 병렬 지점
+	userMap := make(UserMap)
+	for jiraEmail, gitlabUsername := range cfg.Users {
+		users, _, err := gl.Users.ListUsers(&gitlab.ListUsersOptions{
+			Username: &gitlabUsername,
+		})
+		if err != nil {
+			log.Fatalf("Error getting GitLab user: %s", err)
+		}
+
+		if len(users) == 0 {
+			log.Fatalf("No User found, gitlab: %s, jira: %s", gitlabUsername, jiraEmail)
+		}
+
+		userMap[jiraEmail] = users[0]
+	}
 
 	//* Get Project Information
 	jiraProjectID := cfg.Project.Jira.Name
@@ -101,7 +121,7 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) {
 
 	for _, jiraIssue := range jiraIssues {
 		log.Infof("Converting issue: %s", jiraIssue.Key)
-		gitlabIssue := ConvertJiraIssueToGitLabIssue(gl, jr, &jiraIssue)
+		gitlabIssue := ConvertJiraIssueToGitLabIssue(gl, jr, &jiraIssue, userMap)
 		issueLinks[jiraIssue.Key] = &IssueLink{&jiraIssue, gitlabIssue}
 	}
 
