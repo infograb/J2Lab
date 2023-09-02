@@ -22,6 +22,8 @@ go.work
 
 /jira2gitlab
 
-config.yml
-config.yaml
+/config.yml
+/config.yaml
 *.env
+
+/users.csv

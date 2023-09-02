@@ -26,14 +26,18 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 
 	//* StartDate
 	if cfg.Project.Jira.CustomField.EpicStartDate != "" {
-		startDateStr := jiraIssue.Fields.Unknowns[cfg.Project.Jira.CustomField.EpicStartDate].(string)
-		startDate, err := time.Parse("2006-01-02", startDateStr)
-		if err != nil {
-			log.Fatalf("Error parsing time: %s", err)
-		}
+		startDateStr, ok := jiraIssue.Fields.Unknowns[cfg.Project.Jira.CustomField.EpicStartDate].(string)
+		if ok {
+			startDate, err := time.Parse("2006-01-02", startDateStr)
+			if err != nil {
+				log.Fatalf("Error parsing time: %s", err)
+			}
 
-		gitlabCreateEpicOptions.StartDateIsFixed = gitlab.Bool(true)
-		gitlabCreateEpicOptions.StartDateFixed = (*gitlab.ISOTime)(&startDate)
+			gitlabCreateEpicOptions.StartDateIsFixed = gitlab.Bool(true)
+			gitlabCreateEpicOptions.StartDateFixed = (*gitlab.ISOTime)(&startDate)
+		} else {
+			log.Warnf("Unable to convert epic start date from Jira issue %s to GitLab start date", jiraIssue.Key)
+		}
 	}
 
 	//* DueDate
