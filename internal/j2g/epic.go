@@ -12,13 +12,13 @@ import (
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/utils"
 )
 
-func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue *jirax.Issue) *gitlab.Epic {
+func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue *jirax.Issue, userMap UserMap) *gitlab.Epic {
 	cfg := config.GetConfig()
 	gid := cfg.Project.GitLab.Epic
 
 	gitlabCreateEpicOptions := gitlabx.CreateEpicOptions{
 		Title:        gitlab.String(jiraIssue.Fields.Summary),
-		Description:  formatDescription(jr, jiraIssue.Key, jiraIssue.Fields.Description),
+		Description:  formatDescription(jr, jiraIssue.Key, jiraIssue.Fields.Description, userMap),
 		Color:        utils.RandomColor(),
 		CreatedAt:    (*time.Time)(&jiraIssue.Fields.Created),
 		Labels:       convertJiraToGitLabLabels(gl, jr, gid, jiraIssue, true),
@@ -53,7 +53,7 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 
 	//* Comment -> Comment
 	for _, jiraComment := range jiraIssue.Fields.Comments.Comments {
-		createIssueNoteOptions := convertToGitLabComment(jr, jiraIssue.Key, jiraComment)
+		createIssueNoteOptions := convertToGitLabComment(jr, jiraIssue.Key, jiraComment, userMap)
 		createEpicNoteOptions := gitlab.CreateEpicNoteOptions{
 			Body: createIssueNoteOptions.Body,
 		}

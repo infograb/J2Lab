@@ -16,7 +16,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 
 	gitlabCreateIssueOptions := &gitlab.CreateIssueOptions{
 		Title:       &jiraIssue.Fields.Summary,
-		Description: formatDescription(jr, jiraIssue.Key, jiraIssue.Fields.Description),
+		Description: formatDescription(jr, jiraIssue.Key, jiraIssue.Fields.Description, userMap),
 		CreatedAt:   (*time.Time)(&jiraIssue.Fields.Created),
 		DueDate:     (*gitlab.ISOTime)(&jiraIssue.Fields.Duedate),
 		Labels:      convertJiraToGitLabLabels(gl, jr, pid, jiraIssue, false),
@@ -58,7 +58,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 
 	//* Comment -> Comment
 	for _, jiraComment := range jiraIssue.Fields.Comments.Comments {
-		_, _, err := gl.Notes.CreateIssueNote(pid, gitlabIssue.IID, convertToGitLabComment(jr, jiraIssue.Key, jiraComment))
+		_, _, err := gl.Notes.CreateIssueNote(pid, gitlabIssue.IID, convertToGitLabComment(jr, jiraIssue.Key, jiraComment, userMap))
 		if err != nil {
 			log.Fatalf("Error creating GitLab comment: %s", err)
 		}
