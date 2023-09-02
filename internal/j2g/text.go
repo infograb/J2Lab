@@ -7,7 +7,6 @@ import (
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
 	log "github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
-	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/adf"
 	"gitlab.com/infograb/team/devops/toy/gos/boilerplate/internal/config"
 )
 
@@ -32,13 +31,17 @@ func convertToGitLabComment(issueKey string, jiraComment *jira.Comment) *gitlab.
 }
 
 // TODO: Jira ADF -> GitLab Markdown
-func formatDescription(issueKey string, temp string) *string {
-	cfg := config.GetConfig()
-	description, err := adf.GetIssueDescriptionADF(issueKey)
-	if err != nil {
-		log.Fatalf("Error getting issue description: %s", err)
-	}
-	markdownDescription := adf.AdfToMarkdown(description.Content)
-	result := fmt.Sprintf("%s\n\nImported from Jira [%s](%s/browse/%s)", markdownDescription, issueKey, cfg.Jira.Host, issueKey)
-	return &result
+// func formatDescription(jr *jira.Client, issueKey string, content []adf.ADFBlock) *string {
+// 	cfg := config.GetConfig()
+// 	markdownDescription := adf.AdfToMarkdown(content)
+// 	result := fmt.Sprintf("%s\n\nImported from Jira [%s](%s/browse/%s)", markdownDescription, issueKey, cfg.Jira.Host, issueKey)
+// 	return &result
+// }
+
+func formatDescription(jr *jira.Client, issueKey string, content string) *string {
+	return gitlab.String("")
+	// cfg := config.GetConfig()
+	// markdownDescription := adf.AdfToMarkdown(content)
+	// result := fmt.Sprintf("%s\n\nImported from Jira [%s](%s/browse/%s)", markdownDescription, issueKey, cfg.Jira.Host, issueKey)
+	// return &result
 }

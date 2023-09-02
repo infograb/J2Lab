@@ -17,7 +17,7 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 
 	gitlabCreateEpicOptions := gitlabx.CreateEpicOptions{
 		Title:        gitlab.String(jiraIssue.Fields.Summary),
-		Description:  formatDescription(jiraIssue.Key, jiraIssue.Fields.Description),
+		Description:  formatDescription(jr, jiraIssue.Key, jiraIssue.Fields.Description),
 		Color:        utils.RandomColor(),
 		CreatedAt:    (*time.Time)(&jiraIssue.Fields.Created),
 		Labels:       convertJiraToGitLabLabels(gl, jr, gid, jiraIssue, true),

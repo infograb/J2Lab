@@ -6,7 +6,7 @@ import (
 	gitlab "github.com/xanzy/go-gitlab"
 )
 
-func newUserMap(gl *gitlab.Client, jiraIssues []jira.Issue, users map[string]int) UserMap {
+func newUserMap(gl *gitlab.Client, jiraIssues []*jira.Issue, users map[string]int) UserMap {
 	jiraUsers := GetJiraUsersFromIssues(jiraIssues)
 
 	userMap := make(UserMap)
@@ -27,7 +27,7 @@ func newUserMap(gl *gitlab.Client, jiraIssues []jira.Issue, users map[string]int
 	return userMap
 }
 
-func GetJiraUsersFromIssues(issues []jira.Issue) []*jira.User {
+func GetJiraUsersFromIssues(issues []*jira.Issue) []*jira.User {
 	jiraAccountIds := make(map[string]*jira.User)
 	for _, jiraIssue := range issues {
 		// TODO: API를 분석해서 User를 판단할 구석을 만들어야 함

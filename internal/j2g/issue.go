@@ -15,7 +15,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 
 	gitlabCreateIssueOptions := &gitlab.CreateIssueOptions{
 		Title:       &jiraIssue.Fields.Summary,
-		Description: formatDescription(jiraIssue.Key, jiraIssue.Fields.Description),
+		Description: formatDescription(jr, jiraIssue.Key, jiraIssue.Fields.Description),
 		CreatedAt:   (*time.Time)(&jiraIssue.Fields.Created),
 		DueDate:     (*gitlab.ISOTime)(&jiraIssue.Fields.Duedate),
 		Labels:      convertJiraToGitLabLabels(gl, jr, pid, jiraIssue, false),
