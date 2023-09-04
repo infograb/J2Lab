@@ -8,7 +8,7 @@ import (
 	gitlab "github.com/xanzy/go-gitlab"
 )
 
-func convertJiraAttachementToMarkdown(gl *gitlab.Client, jr *jira.Client, id interface{}, attachement *jira.Attachment) string {
+func convertJiraAttachmentToMarkdown(gl *gitlab.Client, jr *jira.Client, id interface{}, attachement *jira.Attachment) string {
 	res, err := jr.Issue.DownloadAttachment(context.Background(), attachement.ID)
 	if err != nil {
 		log.Fatalf("Error downloading file: %s", err)

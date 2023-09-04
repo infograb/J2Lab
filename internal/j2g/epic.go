@@ -6,6 +6,7 @@ import (
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
 	log "github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/adf"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/config"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/gitlabx"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/jirax"
@@ -18,7 +19,7 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 
 	gitlabCreateEpicOptions := gitlabx.CreateEpicOptions{
 		Title:        gitlab.String(jiraIssue.Fields.Summary),
-		Description:  formatDescription(jr, jiraIssue.Key, jiraIssue.Fields.Description, userMap),
+		Description:  formatDescription(jiraIssue.Key, jiraIssue.Fields.Description, []*adf.Media{}, userMap, false),
 		Color:        utils.RandomColor(),
 		CreatedAt:    (*time.Time)(&jiraIssue.Fields.Created),
 		Labels:       convertJiraToGitLabLabels(gl, jr, gid, jiraIssue, true),
@@ -53,9 +54,9 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 
 	//* Comment -> Comment
 	for _, jiraComment := range jiraIssue.Fields.Comments.Comments {
-		createIssueNoteOptions := convertToGitLabComment(jr, jiraIssue.Key, jiraComment, userMap)
+		options := convertToIssueNoteOptions(jiraIssue.Key, jiraComment, []*adf.Media{}, userMap, false)
 		createEpicNoteOptions := gitlab.CreateEpicNoteOptions{
-			Body: createIssueNoteOptions.Body,
+			Body: options.Body,
 		}
 
 		_, _, err := gl.Notes.CreateEpicNote(gid, gitlabEpic.ID, &createEpicNoteOptions)

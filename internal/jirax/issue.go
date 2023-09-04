@@ -51,6 +51,7 @@ type IssueFields struct {
 	Assignee                      *jira.User             `json:"assignee,omitempty" structs:"assignee,omitempty"`
 	Updated                       jira.Time              `json:"updated,omitempty" structs:"updated,omitempty"`
 	Description                   *adf.ADF               `json:"description,omitempty" structs:"description,omitempty"`
+	DescriptionMedia              []string               `json:"description_media,omitempty" structs:"description_media,omitempty"`
 	Summary                       string                 `json:"summary,omitempty" structs:"summary,omitempty"`
 	Creator                       *jira.User             `json:"Creator,omitempty" structs:"Creator,omitempty"`
 	Reporter                      *jira.User             `json:"reporter,omitempty" structs:"reporter,omitempty"`
@@ -94,6 +95,7 @@ type Comment struct {
 	Name         string                 `json:"name,omitempty" structs:"name,omitempty"`
 	Author       jira.User              `json:"author,omitempty" structs:"author,omitempty"`
 	Body         *adf.ADF               `json:"body,omitempty" structs:"body,omitempty"`
+	BodyMedia    []string               `json:"body_media,omitempty" structs:"body_media,omitempty"`
 	UpdateAuthor jira.User              `json:"updateAuthor,omitempty" structs:"updateAuthor,omitempty"`
 	Updated      string                 `json:"updated,omitempty" structs:"updated,omitempty"`
 	Created      string                 `json:"created,omitempty" structs:"created,omitempty"`
