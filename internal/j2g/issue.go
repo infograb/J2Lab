@@ -23,12 +23,18 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 	}
 
 	//* Attachment for Description and Comments
+	ch := make(chan ConvertJiraAttachmentToMarkdownResult, len(jiraIssue.Fields.Attachments))
+
 	markdownList := make(map[string]*adf.Media) // ID -> Markdown
 	for _, jiraAttachment := range jiraIssue.Fields.Attachments {
-		markdown := convertJiraAttachmentToMarkdown(gl, jr, pid, jiraAttachment)
-		markdownList[jiraAttachment.ID] = &adf.Media{
-			Markdown:  markdown,
-			CreatedAt: jiraAttachment.Created,
+		go convertJiraAttachmentToMarkdown(gl, jr, pid, jiraAttachment, ch)
+	}
+
+	for range jiraIssue.Fields.Attachments {
+		result := <-ch
+		markdownList[result.ID] = &adf.Media{
+			Markdown:  result.Markdown,
+			CreatedAt: result.CreatedAt,
 		}
 	}
 

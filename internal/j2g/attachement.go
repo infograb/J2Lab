@@ -8,7 +8,13 @@ import (
 	gitlab "github.com/xanzy/go-gitlab"
 )
 
-func convertJiraAttachmentToMarkdown(gl *gitlab.Client, jr *jira.Client, id interface{}, attachement *jira.Attachment) string {
+type ConvertJiraAttachmentToMarkdownResult struct {
+	Markdown  string
+	ID        string
+	CreatedAt string
+}
+
+func convertJiraAttachmentToMarkdown(gl *gitlab.Client, jr *jira.Client, id interface{}, attachement *jira.Attachment, ch chan ConvertJiraAttachmentToMarkdownResult) {
 	res, err := jr.Issue.DownloadAttachment(context.Background(), attachement.ID)
 	if err != nil {
 		log.Fatalf("Error downloading file: %s", err)
@@ -23,5 +29,9 @@ func convertJiraAttachmentToMarkdown(gl *gitlab.Client, jr *jira.Client, id inte
 		log.Fatalf("Error uploading file: %s", err)
 	}
 
-	return gitlabUploadedFile.Markdown
+	ch <- ConvertJiraAttachmentToMarkdownResult{
+		Markdown:  gitlabUploadedFile.Markdown,
+		ID:        attachement.ID,
+		CreatedAt: attachement.Created,
+	}
 }
