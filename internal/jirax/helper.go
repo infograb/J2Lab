@@ -9,7 +9,7 @@ import (
 )
 
 func parsePlainToMediaName(plain string) ([]string, error) {
-	re, err := regexp.Compile(`!([^|]+)\|width=(\d+),height=(\d+)!`)
+	re, err := regexp.Compile(`!([^|]+)\|(width=\d+?%?)?(,height=\d+?%?)?!`)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error compiling regexp")
 	}
@@ -98,7 +98,8 @@ func UnpaginateIssue(
 				itemV3.Fields.Comments.Comments[idx].BodyMedia = commentMedia
 			}
 
-			result = append(result, &itemV3)
+			temp := itemV3
+			result = append(result, &temp)
 		}
 
 		if err != nil {
