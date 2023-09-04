@@ -21,7 +21,6 @@ func newCmdConfigLint(ioStreams *utils.IOStreams) *cobra.Command {
 }
 
 func runConfigLint(ioStreams *utils.IOStreams) error {
-	_ = config.GetConfig()
-
-	return nil
+	_, err := config.GetConfig()
+	return err
 }

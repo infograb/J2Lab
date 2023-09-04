@@ -10,13 +10,14 @@ import (
 
 func CheckErr(err error) {
 	if err != nil {
-		log.Fatalf("%v", err)
+		log.Fatalf("%+v\n", err)
 	}
 }
 
 func RandomColor() *string {
-	rand.Seed(time.Now().UnixNano())
-	red, green, blue := rand.Intn(256), rand.Intn(256), rand.Intn(256)
+	source := rand.NewSource(time.Now().UnixNano())
+	random := rand.New(source)
+	red, green, blue := random.Intn(256), random.Intn(256), random.Intn(256)
 	colorHex := fmt.Sprintf("#%02X%02X%02X", red, green, blue)
 	return &colorHex
 }

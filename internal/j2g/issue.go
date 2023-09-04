@@ -4,46 +4,82 @@ import (
 	"time"
 
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
-	log "github.com/sirupsen/logrus"
+	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/adf"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/config"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/jirax"
+	"golang.org/x/sync/errgroup"
 )
 
-func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue *jirax.Issue, userMap UserMap) *gitlab.Issue {
-	cfg := config.GetConfig()
+func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue *jirax.Issue, userMap UserMap) (*gitlab.Issue, error) {
+	log := logrus.WithField("jiraIssue", jiraIssue.Key)
+	var g errgroup.Group
+	g.SetLimit(5)
+
+	cfg, err := config.GetConfig()
+	if err != nil {
+		return nil, errors.Wrap(err, "Error getting config")
+	}
+
 	pid := cfg.Project.GitLab.Issue
+
+	labels, err := convertJiraToGitLabLabels(gl, jr, pid, jiraIssue, false)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error converting Jira labels to GitLab labels")
+	}
 
 	gitlabCreateIssueOptions := &gitlab.CreateIssueOptions{
 		Title:     &jiraIssue.Fields.Summary,
 		CreatedAt: (*time.Time)(&jiraIssue.Fields.Created),
 		DueDate:   (*gitlab.ISOTime)(&jiraIssue.Fields.Duedate),
-		Labels:    convertJiraToGitLabLabels(gl, jr, pid, jiraIssue, false),
+		Labels:    labels,
 	}
 
 	//* Attachment for Description and Comments
+	usedAttachment := make(map[string]bool)
+
 	markdownList := make(map[string]*adf.Media) // ID -> Markdown
 	for _, jiraAttachment := range jiraIssue.Fields.Attachments {
-		markdown := convertJiraAttachmentToMarkdown(gl, jr, pid, jiraAttachment)
-		markdownList[jiraAttachment.ID] = &adf.Media{
-			Markdown:  markdown,
-			CreatedAt: jiraAttachment.Created,
-		}
+		g.Go(func(attach *jira.Attachment) func() error {
+			return func() error {
+				attachment, err := convertJiraAttachmentToMarkdown(gl, jr, pid, attach)
+				if err != nil {
+					return errors.Wrap(err, "Error converting Jira attachment to GitLab attachment")
+				}
+
+				markdownList[attachment.ID] = &adf.Media{
+					Markdown:  attachment.Markdown,
+					CreatedAt: attachment.CreatedAt,
+				}
+				log.Debugf("Converted attachment: %s to %s", attachment.ID, attachment.Markdown)
+				return nil
+			}
+		}(jiraAttachment))
+	}
+
+	if err := g.Wait(); err != nil {
+		return nil, errors.Wrap(err, "Error converting Jira attachment to GitLab attachment")
 	}
 
 	//* Description -> Description
-	var descriptionMediaMarkdown []*adf.Media
-	for _, id := range jiraIssue.Fields.DescriptionMedia {
-		if markdown, ok := markdownList[id]; ok {
-			descriptionMediaMarkdown = append(descriptionMediaMarkdown, markdown)
-			delete(markdownList, id)
-		} else {
-			log.Warnf("Unable to find media with ID %s", id)
+	if jiraIssue.Fields.Description != nil {
+		var descriptionMediaMarkdown []*adf.Media
+		for _, id := range jiraIssue.Fields.DescriptionMedia {
+			if markdown, ok := markdownList[id]; ok {
+				descriptionMediaMarkdown = append(descriptionMediaMarkdown, markdown)
+				usedAttachment[id] = true
+			} else {
+				log.Warnf("Unable to find media in Description with ID %s", id)
+			}
 		}
+		description, err := formatDescription(jiraIssue.Key, jiraIssue.Fields.Description, descriptionMediaMarkdown, userMap, true)
+		if err != nil {
+			return nil, errors.Wrap(err, "Error formatting description")
+		}
+		gitlabCreateIssueOptions.Description = description
 	}
-	description := formatDescription(jiraIssue.Key, jiraIssue.Fields.Description, descriptionMediaMarkdown, userMap, true)
-	gitlabCreateIssueOptions.Description = description
 
 	//* Assignee
 	if jiraIssue.Fields.Assignee != nil {
@@ -54,9 +90,13 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 
 	//* Version -> Milestone
 	if len(jiraIssue.Fields.FixVersions) > 0 {
-		milestone := createOrRetrieveMiletone(gl, pid, gitlab.CreateMilestoneOptions{
+		milestone, err := createOrRetrieveMiletone(gl, pid, gitlab.CreateMilestoneOptions{
 			Title: &jiraIssue.Fields.FixVersions[0].Name,
 		}, false)
+
+		if err != nil {
+			return nil, errors.Wrap(err, "Error creating GitLab milestone")
+		}
 
 		gitlabCreateIssueOptions.MilestoneID = &milestone.ID
 	}
@@ -68,32 +108,16 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 			storyPointInt := int(storyPoint)
 			gitlabCreateIssueOptions.Weight = &storyPointInt
 		} else {
-			log.Warnf("Unable to convert story point from Jira issue %s to GitLab weight", jiraIssue.Key)
+			log.Debugf("Unable to convert story point from Jira issue %s to GitLab weight", jiraIssue.Key)
 		}
 	}
 
 	//* 이슈를 생성합니다.
 	gitlabIssue, _, err := gl.Issues.CreateIssue(pid, gitlabCreateIssueOptions)
 	if err != nil {
-		log.Fatalf("Error creating GitLab issue: %s", err)
+		return nil, errors.Wrap(err, "Error creating GitLab issue")
 	}
 	log.Debugf("Created GitLab issue: %d from Jira issue: %s", gitlabIssue.IID, jiraIssue.Key)
-
-	//* Reamin Attachment -> Comment
-	for _, markdown := range markdownList {
-		createdAt, err := time.Parse("2006-01-02T15:04:05.000-0700", markdown.CreatedAt)
-		if err != nil {
-			log.Fatalf("Error parsing time: %s", err)
-		}
-
-		_, _, err = gl.Notes.CreateIssueNote(pid, gitlabIssue.IID, &gitlab.CreateIssueNoteOptions{
-			Body:      &markdown.Markdown,
-			CreatedAt: &createdAt,
-		})
-		if err != nil {
-			log.Fatalf("Error creating GitLab comment: %s", err)
-		}
-	}
 
 	//* Comment -> Comment
 	for _, jiraComment := range jiraIssue.Fields.Comments.Comments {
@@ -101,15 +125,59 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 		for _, id := range jiraIssue.Fields.DescriptionMedia {
 			if markdown, ok := markdownList[id]; ok {
 				commentMediaMarkdown = append(commentMediaMarkdown, markdown)
+				usedAttachment[id] = true
 			} else {
-				log.Warnf("Unable to find media with ID %s", id)
+				log.Warnf("Unable to find media in Comment with ID %s", id)
 			}
 		}
-		options := convertToIssueNoteOptions(jiraIssue.Key, jiraComment, commentMediaMarkdown, userMap, true)
-		_, _, err := gl.Notes.CreateIssueNote(pid, gitlabIssue.IID, options)
-		if err != nil {
-			log.Fatalf("Error creating GitLab comment: %s", err)
+
+		g.Go(func(jiraComment *jirax.Comment) func() error {
+			return func() error {
+				options, err := convertToIssueNoteOptions(jiraIssue.Key, jiraComment, commentMediaMarkdown, userMap, true)
+				if err != nil {
+					return errors.Wrap(err, "Error formatting comment")
+				}
+
+				_, _, err = gl.Notes.CreateIssueNote(pid, gitlabIssue.IID, options)
+				if err != nil {
+					return errors.Wrap(err, "Error creating note")
+				}
+				return nil
+			}
+		}(jiraComment))
+	}
+
+	if err := g.Wait(); err != nil {
+		return nil, errors.Wrap(err, "Error creating GitLab issue")
+	}
+
+	//* Reamin Attachment -> Comment
+	for id, markdown := range markdownList {
+		if used, ok := usedAttachment[id]; ok || used {
+			continue
 		}
+
+		createdAt, err := time.Parse("2006-01-02T15:04:05.000-0700", markdown.CreatedAt)
+		if err != nil {
+			return nil, errors.Wrap(err, "Error parsing time")
+		}
+
+		g.Go(func(markdown *adf.Media) func() error {
+			return func() error {
+				_, _, err = gl.Notes.CreateIssueNote(pid, gitlabIssue.IID, &gitlab.CreateIssueNoteOptions{
+					Body:      &markdown.Markdown,
+					CreatedAt: &createdAt,
+				})
+				if err != nil {
+					return errors.Wrap(err, "Error creating note")
+				}
+				return nil
+			}
+		}(markdown))
+	}
+
+	if err := g.Wait(); err != nil {
+		return nil, errors.Wrap(err, "Error creating GitLab issue")
 	}
 
 	//* Resolution -> Close issue (CloseAt)
@@ -121,5 +189,5 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 		log.Debugf("Closed GitLab issue: %d", gitlabIssue.IID)
 	}
 
-	return gitlabIssue
+	return gitlabIssue, nil
 }

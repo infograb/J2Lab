@@ -1,34 +1,39 @@
 package j2g
 
 import (
+	"fmt"
+
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
-	log "github.com/sirupsen/logrus"
+	"github.com/pkg/errors"
 	gitlab "github.com/xanzy/go-gitlab"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/jirax"
 )
 
-func newUserMap(gl *gitlab.Client, jiraIssues []*jirax.Issue, users map[string]int) UserMap {
-	jiraUsers := GetJiraUsersFromIssues(jiraIssues)
+func newUserMap(gl *gitlab.Client, jiraIssues []*jirax.Issue, users map[string]int) (UserMap, error) {
+	jiraUsers, err := GetJiraUsersFromIssues(jiraIssues)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error getting Jira users from issues")
+	}
 
 	userMap := make(UserMap)
 	for _, jiraUser := range jiraUsers {
 		gitlabID, ok := users[jiraUser.AccountID]
 		if !ok {
-			log.Fatalf("No GitLab user found for Jira account ID %s (%s)", jiraUser.AccountID, jiraUser.DisplayName)
+			return nil, errors.New(fmt.Sprintf("No GitLab user found for Jira account ID %s (%s)", jiraUser.AccountID, jiraUser.DisplayName))
 		}
 
 		user, _, err := gl.Users.GetUser(gitlabID, gitlab.GetUsersOptions{}) //! 병렬
 		if err != nil {
-			log.Fatalf("Error getting GitLab user: %s", err)
+			return nil, errors.Wrap(err, fmt.Sprintf("Error getting GitLab user %d", gitlabID))
 		}
 
 		userMap[jiraUser.AccountID] = user
 	}
 
-	return userMap
+	return userMap, nil
 }
 
-func GetJiraUsersFromIssues(issues []*jirax.Issue) []*jira.User {
+func GetJiraUsersFromIssues(issues []*jirax.Issue) ([]*jira.User, error) {
 	jiraAccountIds := make(map[string]*jira.User)
 	for _, jiraIssue := range issues {
 		// TODO: API를 분석해서 User를 판단할 구석을 만들어야 함
@@ -49,5 +54,5 @@ func GetJiraUsersFromIssues(issues []*jirax.Issue) []*jira.User {
 		users = append(users, user)
 	}
 
-	return users
+	return users, nil
 }

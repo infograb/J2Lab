@@ -1,6 +1,7 @@
 package run
 
 import (
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/config"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/j2g"
@@ -42,11 +43,12 @@ func (o *Options) validate() error {
 }
 
 func (o *Options) run() error {
-	cfg := config.GetConfig()
+	cfg, err := config.GetConfig()
+	if err != nil {
+		return errors.Wrap(err, "Error getting config")
+	}
 
 	gl := config.GetGitLabClient(cfg.GitLab)
 	jr := config.GetJiraClient(cfg.Jira)
-	j2g.ConvertByProject(gl, jr)
-
-	return nil
+	return j2g.ConvertByProject(gl, jr)
 }

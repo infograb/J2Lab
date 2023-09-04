@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -59,25 +60,31 @@ func capitalizeJiraProject(cfg *Config) {
 	jiraProjectID := cfg.Project.Jira.Name
 	caser := cases.Upper(language.English)
 	cfg.Project.Jira.Name = caser.String(jiraProjectID)
-
 }
 
-func GetConfig() *Config {
+func GetConfig() (*Config, error) {
 	if cfg != nil {
-		return cfg
+		return cfg, nil
 	}
 
-	InitConfig()
-
-	err := viper.Unmarshal(&cfg)
+	err := InitConfig()
 	if err != nil {
-		log.Fatalf("Error unmarshalling config: %s", err)
+		return nil, errors.Wrap(err, "Error initializing config")
 	}
 
-	cfg.Users = parseUserCSVs()
+	err = viper.Unmarshal(&cfg)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error unmarshalling config")
+	}
+
+	cfg.Users, err = parseUserCSVs()
+	if err != nil {
+		return nil, errors.Wrap(err, "Error parsing users.csv")
+	}
+
 	capitalizeJiraProject(cfg)
 
-	return cfg
+	return cfg, nil
 }
 
 // config file is read by yaml format
@@ -86,10 +93,10 @@ func GetConfig() *Config {
 // - $HOME/.config/jira2gitlab/config.yaml
 // - $PWD/config.yaml
 
-func InitConfig() {
+func InitConfig() error {
 	pwd, err := os.Getwd()
 	if err != nil {
-		log.Fatalf("Error getting current working directory: %s", err)
+		return errors.Wrap(err, "Error getting current working directory")
 	}
 
 	// Search config in home directory with name ".cobra" (without extension).
@@ -105,24 +112,25 @@ func InitConfig() {
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
-			log.Fatalf("Config file not found: %s\nConfig file must be in the format of config.yaml", err)
+			return errors.Wrap(err, "Config file not found: %s\nConfig file must be in the format of conf")
 		} else {
-			log.Fatalf("Error reading config file: %s", err)
+			return errors.Wrap(err, "Error reading config file")
 		}
 	}
 
 	log.Debugf("Using config file: %s", viper.ConfigFileUsed())
+	return nil
 }
 
-func parseUserCSVs() map[string]int {
+func parseUserCSVs() (map[string]int, error) {
 	pwd, err := os.Getwd()
 	if err != nil {
-		log.Fatalf("Error getting home directory: %s", err)
+		return nil, errors.Wrap(err, "Error getting home directory")
 	}
 
 	file, err := os.Open(filepath.Join(pwd, "users.csv"))
 	if err != nil {
-		log.Fatalf("Error opening users file: %s", err)
+		return nil, errors.Wrap(err, "Error opening users file")
 	}
 	defer file.Close()
 
@@ -148,8 +156,8 @@ func parseUserCSVs() map[string]int {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		log.Fatalf("Error reading users file: %s", err)
+		return nil, errors.Wrap(err, "Error reading users file")
 	}
 
-	return userMap
+	return userMap, nil
 }

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/pkg/errors"
 )
 
 // FileExists checks if a file exists at the given path
@@ -28,21 +30,21 @@ func CopyFile(w io.Writer, srcPath, destPath string) error {
 	// Open the source file for reading
 	srcFile, err := os.Open(srcPath)
 	if err != nil {
-		return fmt.Errorf("error opening source file: %v", err)
+		return errors.Wrap(err, "error opening source file: %v")
 	}
 	defer srcFile.Close()
 
 	// Create or override the destination file
 	destFile, err := os.Create(destPath)
 	if err != nil {
-		return fmt.Errorf("error creating destination file: %v", err)
+		return errors.Wrap(err, "error creating destination file: %v")
 	}
 	defer destFile.Close()
 
 	// Copy the contents from the source file to the destination file
 	_, err = io.Copy(destFile, srcFile)
 	if err != nil {
-		return fmt.Errorf("error copying file: %v", err)
+		return errors.Wrap(err, "error copying file: %v")
 	}
 
 	return nil
