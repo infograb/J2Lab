@@ -2,9 +2,9 @@ package j2g
 
 import (
 	"fmt"
-	"log"
 
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
+	"github.com/pkg/errors"
 	gitlab "github.com/xanzy/go-gitlab"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/gitlabx"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/jirax"
@@ -20,7 +20,7 @@ type JiraEpicLink struct {
 	gitlabEpic *gitlab.Epic
 }
 
-func convertLinkType(linkType string) *string {
+func convertLinkType(linkType string) (*string, error) {
 	linkTypeMap := map[string]string{
 		// Jira issue type -> GitLab issue/epic type
 		"Blocks":    "blocks",
@@ -30,14 +30,13 @@ func convertLinkType(linkType string) *string {
 	}
 
 	if convertedLinkType, ok := linkTypeMap[linkType]; ok {
-		return &convertedLinkType
+		return &convertedLinkType, nil
 	} else {
-		log.Fatalf("Unknown link type: %s", linkType)
-		return nil
+		return nil, errors.New(fmt.Sprintf("Unknown link type: %s", linkType))
 	}
 }
 
-func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*JiraEpicLink, issueLinks map[string]*JiraIssueLink) {
+func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*JiraEpicLink, issueLinks map[string]*JiraIssueLink) error {
 	//* Jira Issue Parent -> GitLab Epic
 	//* Jira Subtask Parent -> GitLab Issue // 단 이 경우, block link를 건다.
 	for _, jiraIssue := range issueLinks {
@@ -51,10 +50,9 @@ func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*JiraEpicLink
 					EpicID: &parentEpicLink.gitlabEpic.ID,
 				})
 				if err != nil {
-					log.Fatalf("Error adding GitLab epic parent: %s", err)
+					return errors.Wrap(err, "Error adding GitLab epic parent")
 				}
 			} else if parentIssueLink, ok := issueLinks[parentKey]; ok {
-				// TODO!!!
 				parentIssueIID := fmt.Sprintf("%d", parentIssueLink.gitlabIssue.IID)
 				_, _, err := gl.IssueLinks.CreateIssueLink(pid, jiraIssue.gitlabIssue.IID, &gitlab.CreateIssueLinkOptions{
 					// IID: &issueLinks[innerIssueLink.OutwardIssue.Key].gitlabIssue.IID,
@@ -63,7 +61,7 @@ func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*JiraEpicLink
 					LinkType:        gitlab.String("blocks"),
 				})
 				if err != nil {
-					log.Fatalf("Error creating GitLab issue link: %s", err)
+					return errors.Wrap(err, "Error creating GitLab issue link")
 				}
 			}
 		}
@@ -87,14 +85,19 @@ func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*JiraEpicLink
 				if outwardIssue != nil {
 					if _, ok := issueLinks[outwardIssue.Key]; ok {
 						targetIssueIID := fmt.Sprintf("%d", issueLinks[outwardIssue.Key].gitlabIssue.IID)
-						_, _, err := gl.IssueLinks.CreateIssueLink(pid, jiraIssue.gitlabIssue.IID, &gitlab.CreateIssueLinkOptions{
+						linkType, err := convertLinkType(outwardType)
+						if err != nil {
+							return errors.Wrap(err, "Error creating GitLab issue link")
+						}
+
+						_, _, err = gl.IssueLinks.CreateIssueLink(pid, jiraIssue.gitlabIssue.IID, &gitlab.CreateIssueLinkOptions{
 							// IID: &issueLinks[innerIssueLink.OutwardIssue.Key].gitlabIssue.IID,
 							TargetProjectID: &pid,
 							TargetIssueIID:  &targetIssueIID,
-							LinkType:        convertLinkType(outwardType),
+							LinkType:        linkType,
 						})
 						if err != nil {
-							log.Fatalf("Error creating GitLab issue link: %s", err)
+							return errors.Wrap(err, "Error creating GitLab issue link")
 						}
 					}
 				}
@@ -119,17 +122,23 @@ func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*JiraEpicLink
 				if outwardIssue != nil {
 					if _, ok := epicLinks[outwardIssue.Key]; ok {
 						targetEpicIID := fmt.Sprintf("%d", epicLinks[outwardIssue.Key].gitlabEpic.IID)
-						_, _, err := gitlabx.CreateEpicLink(gl, gid, jiraIssue.gitlabEpic.IID, &gitlabx.CreateEpicLinkOptions{
+						linkType, err := convertLinkType(outwardType)
+						if err != nil {
+							return errors.Wrap(err, "Error creating GitLab epic link")
+						}
+						_, _, err = gitlabx.CreateEpicLink(gl, gid, jiraIssue.gitlabEpic.IID, &gitlabx.CreateEpicLinkOptions{
 							TargetGroupID: &gid,
 							TargetEpicIID: &targetEpicIID,
-							LinkType:      convertLinkType(outwardType),
+							LinkType:      linkType,
 						})
 						if err != nil {
-							log.Fatalf("Error creating GitLab epic link: %s", err)
+							return errors.Wrap(err, "Error creating GitLab epic link")
 						}
 					}
 				}
 			}
 		}
 	}
+
+	return nil
 }

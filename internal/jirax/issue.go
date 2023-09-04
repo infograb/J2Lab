@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
+	"github.com/pkg/errors"
 	"github.com/trivago/tgo/tcontainer"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/adf"
 )
@@ -149,13 +150,15 @@ func (s *IssueService) Search(ctx context.Context, jql string, options *jira.Sea
 
 	req, err := s.client.NewRequest(ctx, http.MethodGet, u.String(), nil)
 	if err != nil {
-		return []Issue{}, nil, err
+		return []Issue{}, nil, errors.Wrap(err, "Error creating new request")
 	}
 
 	v := new(searchResult)
 	resp, err := s.client.Do(req, v)
 	if err != nil {
 		err = jira.NewJiraError((*jira.Response)(resp), err)
+		return []Issue{}, resp, errors.Wrap(err, "Error getting issues")
 	}
-	return v.Issues, resp, err
+
+	return v.Issues, resp, nil
 }

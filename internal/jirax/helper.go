@@ -2,16 +2,16 @@ package jirax
 
 import (
 	"context"
-	"log"
 	"regexp"
 
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
+	"github.com/pkg/errors"
 )
 
-func parsePlainToMediaName(plain string) []string {
+func parsePlainToMediaName(plain string) ([]string, error) {
 	re, err := regexp.Compile(`!([^|]+)\|width=(\d+),height=(\d+)!`)
 	if err != nil {
-		log.Fatalf("Error compiling regexp: %s", err)
+		return nil, errors.Wrap(err, "Error compiling regexp")
 	}
 
 	// Make a list of all matches
@@ -22,7 +22,7 @@ func parsePlainToMediaName(plain string) []string {
 		mediaNames[i] = match[1]
 	}
 
-	return mediaNames
+	return mediaNames, nil
 }
 
 func UnpaginateIssue(
@@ -42,12 +42,12 @@ func UnpaginateIssue(
 	for {
 		itemsV2, _, err := jr.Issue.Search(context.Background(), jql, searchOptions)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Error getting Jira issues V2")
 		}
 
 		itemsV3, r, err := issueService.Search(context.Background(), jql, searchOptions)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Error getting Jira issues V3")
 		}
 
 		//* Mapping Media
@@ -57,7 +57,10 @@ func UnpaginateIssue(
 			attachments := itemV3.Fields.Attachments
 
 			// Mapping Description with Attachment
-			descriptionMediaNames := parsePlainToMediaName(itemV2.Fields.Description)
+			descriptionMediaNames, err := parsePlainToMediaName(itemV2.Fields.Description)
+			if err != nil {
+				return nil, errors.Wrap(err, "Error parsing description")
+			}
 
 			descriptionMedia := make([]string, len(descriptionMediaNames))
 			descriptionMediaCount := 0
@@ -75,7 +78,10 @@ func UnpaginateIssue(
 
 			// Mapping Comment with Attachment
 			for idx, comment := range itemV2.Fields.Comments.Comments {
-				commentMediaNames := parsePlainToMediaName(comment.Body)
+				commentMediaNames, err := parsePlainToMediaName(comment.Body)
+				if err != nil {
+					return nil, errors.Wrap(err, "Error parsing comment")
+				}
 
 				commentMedia := make([]string, len(commentMediaNames))
 				commentMediaCount := 0
@@ -96,7 +102,7 @@ func UnpaginateIssue(
 		}
 
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Error getting Jira issues")
 		}
 
 		if r.StartAt+r.MaxResults >= r.Total {

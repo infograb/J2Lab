@@ -4,25 +4,26 @@ import (
 	"time"
 
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
 )
 
-func createOrRetrieveMiletone(gl *gitlab.Client, pid interface{}, option gitlab.CreateMilestoneOptions, closed bool) *gitlab.Milestone {
+func createOrRetrieveMiletone(gl *gitlab.Client, pid interface{}, option gitlab.CreateMilestoneOptions, closed bool) (*gitlab.Milestone, error) {
 	milestones, _, err := gl.Milestones.ListMilestones(pid, &gitlab.ListMilestonesOptions{
 		Title: option.Title,
 	})
 	if err != nil {
-		log.Fatalf("Error getting milestone: %s", err)
+		return nil, errors.Wrap(err, "Error getting milestone")
 	}
 
 	if len(milestones) > 0 {
-		return milestones[0]
+		return milestones[0], nil
 	}
 
 	milestone, _, err := gl.Milestones.CreateMilestone(pid, &option)
 	if err != nil {
-		log.Fatalf("Error creating milestone: %s", err)
+		return nil, errors.Wrap(err, "Error creating milestone")
 	}
 
 	if closed {
@@ -30,21 +31,21 @@ func createOrRetrieveMiletone(gl *gitlab.Client, pid interface{}, option gitlab.
 			StateEvent: gitlab.String("close"),
 		})
 		if err != nil {
-			log.Fatalf("Error closing milestone: %s", err)
+			return nil, errors.Wrap(err, "Error closing milestone")
 		}
 	}
 
-	return milestone
+	return milestone, nil
 }
 
-func createMilestoneFromJiraVersion(jr *jira.Client, gl *gitlab.Client, pid interface{}, jiraVersion *jira.Version) *gitlab.Milestone {
+func createMilestoneFromJiraVersion(jr *jira.Client, gl *gitlab.Client, pid interface{}, jiraVersion *jira.Version) (*gitlab.Milestone, error) {
 	log.Infof("Creating milestone: %s", jiraVersion.Name)
 
 	var startDate time.Time
 	if jiraVersion.StartDate != "" {
 		parsedDate, err := time.Parse("2006-01-02", jiraVersion.StartDate)
 		if err != nil {
-			log.Fatalf("Error parsing time: %s", err)
+			return nil, errors.Wrap(err, "Error parsing Start Date")
 		}
 		startDate = parsedDate
 	}
@@ -53,7 +54,7 @@ func createMilestoneFromJiraVersion(jr *jira.Client, gl *gitlab.Client, pid inte
 	if jiraVersion.ReleaseDate != "" {
 		parsedDate, err := time.Parse("2006-01-02", jiraVersion.ReleaseDate)
 		if err != nil {
-			log.Fatalf("Error parsing time: %s", err)
+			return nil, errors.Wrap(err, "Error parsing release Date")
 		}
 		releaseDate = parsedDate
 	}
@@ -64,7 +65,10 @@ func createMilestoneFromJiraVersion(jr *jira.Client, gl *gitlab.Client, pid inte
 		StartDate:   (*gitlab.ISOTime)(&startDate),
 		DueDate:     (*gitlab.ISOTime)(&releaseDate),
 	}
-	milestone := createOrRetrieveMiletone(gl, pid, option, *jiraVersion.Archived || *jiraVersion.Released)
+	milstone, err := createOrRetrieveMiletone(gl, pid, option, *jiraVersion.Archived || *jiraVersion.Released)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error creating milestone")
+	}
 
-	return milestone
+	return milstone, nil
 }

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/pkg/errors"
 	gitlab "github.com/xanzy/go-gitlab"
 )
 
@@ -27,19 +28,19 @@ type CreateEpicOptions struct {
 func CreateEpic(gl *gitlab.Client, gid interface{}, opt *CreateEpicOptions) (*gitlab.Epic, *gitlab.Response, error) {
 	group, err := parseID(gid)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "Error parsing ID")
 	}
 	u := fmt.Sprintf("groups/%s/epics", gitlab.PathEscape(group))
 
 	req, err := gl.NewRequest(http.MethodPost, u, opt, nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "Error creating request")
 	}
 
 	e := new(gitlab.Epic)
 	resp, err := gl.Do(req, e)
 	if err != nil {
-		return nil, resp, err
+		return nil, resp, errors.Wrap(err, "Error making request")
 	}
 
 	return e, resp, nil

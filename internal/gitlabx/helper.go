@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/pkg/errors"
 	"github.com/xanzy/go-gitlab"
 )
 
@@ -14,7 +15,7 @@ func parseID(id interface{}) (string, error) {
 	case string:
 		return v, nil
 	default:
-		return "", fmt.Errorf("invalid ID type %#v, the ID must be an int or a string", id)
+		return "", errors.New(fmt.Sprintf("invalid ID type %#v, the ID must be an int or a string", id))
 	}
 }
 
@@ -34,7 +35,7 @@ func Unpaginate[T any](
 
 		items, resp, err := gitlabAPIFunction(opt)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Error making request")
 		}
 
 		result = append(result, items...)

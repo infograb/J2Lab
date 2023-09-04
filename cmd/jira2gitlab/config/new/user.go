@@ -1,9 +1,9 @@
 package new
 
 import (
-	"log"
 	"os"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/config"
@@ -35,12 +35,19 @@ func runConfigNewUser(io *utils.IOStreams) error {
 	config.InitConfig()
 	err := viper.Unmarshal(&cfg)
 	if err != nil {
-		log.Fatalf("Error unmarshalling config: %s", err)
+		errors.Wrap(err, "Error unmarshalling config")
 	}
 
 	jr := config.GetJiraClient(cfg.Jira)
-	jiraEpics, jiraIssues := j2g.GetJiraIssues(jr, cfg.Project.Jira.Name, cfg.Project.Jira.Jql)
-	users := j2g.GetJiraUsersFromIssues(append(jiraEpics, jiraIssues...))
+	jiraEpics, jiraIssues, err := j2g.GetJiraIssues(jr, cfg.Project.Jira.Name, cfg.Project.Jira.Jql)
+	if err != nil {
+		return errors.Wrap(err, "Error getting Jira issues")
+	}
+
+	users, err := j2g.GetJiraUsersFromIssues(append(jiraEpics, jiraIssues...))
+	if err != nil {
+		return errors.Wrap(err, "Error getting Jira users")
+	}
 
 	file, err := os.Create("users.csv")
 	if err != nil {

@@ -1,9 +1,11 @@
 package j2g
 
 import (
+	"fmt"
 	"time"
 
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
+	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/adf"
@@ -13,16 +15,30 @@ import (
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/utils"
 )
 
-func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue *jirax.Issue, userMap UserMap) *gitlab.Epic {
-	cfg := config.GetConfig()
+func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue *jirax.Issue, userMap UserMap) (*gitlab.Epic, error) {
+	cfg, err := config.GetConfig()
+	if err != nil {
+		return nil, errors.Wrap(err, "Error getting config")
+	}
+
 	gid := cfg.Project.GitLab.Epic
+
+	description, err := formatDescription(jiraIssue.Key, jiraIssue.Fields.Description, []*adf.Media{}, userMap, false)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error formatting description")
+	}
+
+	labels, err := convertJiraToGitLabLabels(gl, jr, gid, jiraIssue, true)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error converting Jira labels to GitLab labels")
+	}
 
 	gitlabCreateEpicOptions := gitlabx.CreateEpicOptions{
 		Title:        gitlab.String(jiraIssue.Fields.Summary),
-		Description:  formatDescription(jiraIssue.Key, jiraIssue.Fields.Description, []*adf.Media{}, userMap, false),
+		Description:  description,
 		Color:        utils.RandomColor(),
 		CreatedAt:    (*time.Time)(&jiraIssue.Fields.Created),
-		Labels:       convertJiraToGitLabLabels(gl, jr, gid, jiraIssue, true),
+		Labels:       labels,
 		DueDateFixed: (*gitlab.ISOTime)(&jiraIssue.Fields.Duedate),
 	}
 
@@ -32,7 +48,7 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 		if ok {
 			startDate, err := time.Parse("2006-01-02", startDateStr)
 			if err != nil {
-				log.Fatalf("Error parsing time: %s", err)
+				return nil, errors.Wrap(err, "Error parsing time")
 			}
 
 			gitlabCreateEpicOptions.StartDateIsFixed = gitlab.Bool(true)
@@ -48,20 +64,24 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 	//* 에픽을 생성합니다.
 	gitlabEpic, _, err := gitlabx.CreateEpic(gl, cfg.Project.GitLab.Epic, &gitlabCreateEpicOptions)
 	if err != nil {
-		log.Fatalf("Error creating GitLab epic: %s", err)
+		return nil, errors.Wrap(err, "Error creating GitLab epic")
 	}
 	log.Debugf("Created GitLab epic: %d from Jira issue: %s", gitlabEpic.IID, jiraIssue.Key)
 
 	//* Comment -> Comment
 	for _, jiraComment := range jiraIssue.Fields.Comments.Comments {
-		options := convertToIssueNoteOptions(jiraIssue.Key, jiraComment, []*adf.Media{}, userMap, false)
+		options, err := convertToIssueNoteOptions(jiraIssue.Key, jiraComment, []*adf.Media{}, userMap, false)
+		if err != nil {
+			return nil, errors.Wrap(err, "Error converting Jira comment to GitLab comment")
+		}
+
 		createEpicNoteOptions := gitlab.CreateEpicNoteOptions{
 			Body: options.Body,
 		}
 
-		_, _, err := gl.Notes.CreateEpicNote(gid, gitlabEpic.ID, &createEpicNoteOptions)
+		_, _, err = gl.Notes.CreateEpicNote(gid, gitlabEpic.ID, &createEpicNoteOptions)
 		if err != nil {
-			log.Fatalf("Error creating GitLab comment with gid %s, epic ID %d: %s", gid, gitlabEpic.ID, err)
+			return nil, errors.Wrap(err, fmt.Sprintf("Error creating GitLab comment with gid %s, epic ID %d", gid, gitlabEpic.ID))
 		}
 	}
 
@@ -91,5 +111,5 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 		log.Debugf("Closed GitLab epic: %d", gitlabEpic.IID)
 	}
 
-	return gitlabEpic
+	return gitlabEpic, nil
 }

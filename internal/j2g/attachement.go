@@ -4,20 +4,20 @@ import (
 	"context"
 
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
-	log "github.com/sirupsen/logrus"
+	"github.com/pkg/errors"
 	gitlab "github.com/xanzy/go-gitlab"
 )
 
-type ConvertJiraAttachmentToMarkdownResult struct {
+type Attachment struct {
 	Markdown  string
 	ID        string
 	CreatedAt string
 }
 
-func convertJiraAttachmentToMarkdown(gl *gitlab.Client, jr *jira.Client, id interface{}, attachement *jira.Attachment, ch chan ConvertJiraAttachmentToMarkdownResult) {
+func convertJiraAttachmentToMarkdown(gl *gitlab.Client, jr *jira.Client, id interface{}, attachement *jira.Attachment, ch chan Attachment) (*Attachment, error) {
 	res, err := jr.Issue.DownloadAttachment(context.Background(), attachement.ID)
 	if err != nil {
-		log.Fatalf("Error downloading file: %s", err)
+		return nil, errors.Wrap(err, "Error downloading file")
 	}
 
 	fileReader := res.Body
@@ -26,12 +26,13 @@ func convertJiraAttachmentToMarkdown(gl *gitlab.Client, jr *jira.Client, id inte
 	// Upload image to GitLab and retreive a URL
 	gitlabUploadedFile, _, err := gl.Projects.UploadFile(id, fileReader, attachement.Filename, nil)
 	if err != nil {
-		log.Fatalf("Error uploading file: %s", err)
+		return nil, errors.Wrap(err, "Error uploading file")
 	}
 
-	ch <- ConvertJiraAttachmentToMarkdownResult{
+	return &Attachment{
 		Markdown:  gitlabUploadedFile.Markdown,
 		ID:        attachement.ID,
 		CreatedAt: attachement.Created,
-	}
+	}, nil
+
 }
