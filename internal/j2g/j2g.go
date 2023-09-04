@@ -26,14 +26,14 @@ func GetJiraIssues(jr *jira.Client, jiraProjectID string, jql string) ([]*jirax.
 	}
 
 	//* Get Jira Issues for Epic
-	epicJql := fmt.Sprintf("%s project=%s AND type = Epic Order by key ASC", prefixJql, jiraProjectID)
+	epicJql := fmt.Sprintf("%s project = %s AND type = Epic Order by key ASC", prefixJql, jiraProjectID)
 	jiraEpics, err := jirax.UnpaginateIssue(jr, epicJql)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "Error getting Jira issues for GitLab Epics")
 	}
 
 	//* Get Jira Issues for Issue
-	issueJql := fmt.Sprintf("%s project=%s AND type != Epic Order by key ASC", prefixJql, jiraProjectID)
+	issueJql := fmt.Sprintf("%s project = %s AND type != Epic Order by key ASC", prefixJql, jiraProjectID)
 	jiraIssues, err := jirax.UnpaginateIssue(jr, issueJql)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "Error getting Jira issues for GitLab Issues")
@@ -45,7 +45,7 @@ func GetJiraIssues(jr *jira.Client, jiraProjectID string, jql string) ([]*jirax.
 // ! Entry
 func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 	var g errgroup.Group
-	g.SetLimit(10)
+	g.SetLimit(5)
 
 	cfg, err := config.GetConfig()
 	if err != nil {
@@ -96,7 +96,6 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 	}
 
 	for _, version := range jiraProject.Versions {
-		v := version
 		exist := false
 		for _, milestone := range existingMilestones {
 			if milestone.Title == version.Name {
@@ -107,10 +106,15 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 		}
 
 		if !exist {
-			g.Go(func() error {
-				createMilestoneFromJiraVersion(jr, gl, gitlabProject.ID, &v)
-				return nil
-			})
+			g.Go(func(version jira.Version) func() error {
+				return func() error {
+					_, err := createMilestoneFromJiraVersion(jr, gl, gitlabProject.ID, &version)
+					if err != nil {
+						return errors.Wrap(err, "Error creating GitLab milestone")
+					}
+					return nil
+				}
+			}(version))
 		}
 	}
 
@@ -122,14 +126,19 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 	issueLinks := make(map[string]*JiraIssueLink)
 
 	//* Epic
+	log.Infof("Converting %d epics...", len(jiraEpics))
 	for _, jiraEpic := range jiraEpics {
-		epic := jiraEpic
-		g.Go(func() error {
-			log.Infof("Converting epic: %s", epic.Key)
-			gitlabEpic, err := ConvertJiraIssueToGitLabEpic(gl, jr, epic, userMap)
-			epicLinks[epic.Key] = &JiraEpicLink{epic, gitlabEpic}
-			return err
-		})
+		g.Go(func(epic *jirax.Issue) func() error {
+			return func() error {
+				log.Infof("Converting epic: %s", epic.Key)
+				gitlabEpic, err := ConvertJiraIssueToGitLabEpic(gl, jr, epic, userMap)
+				if err != nil {
+					return errors.Wrap(err, fmt.Sprintf("Error converting epic: %s", epic.Key))
+				}
+				epicLinks[epic.Key] = &JiraEpicLink{epic, gitlabEpic}
+				return nil
+			}
+		}(jiraEpic))
 	}
 
 	if err := g.Wait(); err != nil {
@@ -137,18 +146,24 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 	}
 
 	//* Issue
+	log.Infof("Converting %d issues", len(jiraIssues))
 	for _, jiraIssue := range jiraIssues {
-		issue := jiraIssue
-		g.Go(func() error {
-			log.Infof("Converting issue: %s", issue.Key)
-			gitlabIssue, err := ConvertJiraIssueToGitLabIssue(gl, jr, issue, userMap)
-			issueLinks[issue.Key] = &JiraIssueLink{issue, gitlabIssue}
-			return err
-		})
+		// g.Go(func(jiraIssue *jirax.Issue) func() error {
+		// 	return func() error {
+		log.Infof("Converting issue: %s", jiraIssue.Key)
+		gitlabIssue, err := ConvertJiraIssueToGitLabIssue(gl, jr, jiraIssue, userMap)
+		if err != nil {
+			return errors.Wrap(err, fmt.Sprintf("Error converting issue: %s", jiraIssue.Key))
+		}
+
+		issueLinks[jiraIssue.Key] = &JiraIssueLink{jiraIssue, gitlabIssue}
+		// return nil
+		// 	}
+		// }(jiraIssue))
 	}
-	if err := g.Wait(); err != nil {
-		return errors.Wrap(err, "Error converting issue")
-	}
+	// if err := g.Wait(); err != nil {
+	// 	return errors.Wrap(err, "Error converting issue")
+	// }
 
 	//* Link
 	err = Link(gl, jr, epicLinks, issueLinks)

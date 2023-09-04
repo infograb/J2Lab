@@ -14,7 +14,7 @@ type Attachment struct {
 	CreatedAt string
 }
 
-func convertJiraAttachmentToMarkdown(gl *gitlab.Client, jr *jira.Client, id interface{}, attachement *jira.Attachment, ch chan Attachment) (*Attachment, error) {
+func convertJiraAttachmentToMarkdown(gl *gitlab.Client, jr *jira.Client, id interface{}, attachement *jira.Attachment) (*Attachment, error) {
 	res, err := jr.Issue.DownloadAttachment(context.Background(), attachement.ID)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error downloading file")
@@ -34,5 +34,4 @@ func convertJiraAttachmentToMarkdown(gl *gitlab.Client, jr *jira.Client, id inte
 		ID:        attachement.ID,
 		CreatedAt: attachement.Created,
 	}, nil
-
 }

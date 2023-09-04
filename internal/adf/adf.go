@@ -1,6 +1,7 @@
 package adf
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -57,6 +58,10 @@ func AdfToGitLabMarkdown(blocks []*ADFBlock, mediaMarkdown []*Media, userMap Use
 		case "mediaGroup", "mediaSingle":
 			if isProject {
 				for range block.Content {
+					if mediaCount >= len(mediaMarkdown) {
+						return "", errors.New("Media count is greater than media markdown count")
+					}
+
 					md.WriteString(mediaMarkdown[mediaCount].Markdown + "\n")
 					mediaCount++
 				}
