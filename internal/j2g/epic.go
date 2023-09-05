@@ -123,7 +123,10 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 	}
 
 	//* DueDate
-	// TODO DueDate
+	if jiraIssue.Fields.Duedate != (jira.Date{}) {
+		gitlabCreateEpicOptions.DueDateIsFixed = gitlab.Bool(true)
+		gitlabCreateEpicOptions.DueDateFixed = (*gitlab.ISOTime)(&jiraIssue.Fields.Duedate)
+	}
 
 	//* 에픽을 생성합니다.
 	gitlabEpic, _, err := gitlabx.CreateEpic(gl, cfg.Project.GitLab.Epic, &gitlabCreateEpicOptions)

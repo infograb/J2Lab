@@ -75,6 +75,7 @@ func UnpaginateIssue(
 			}
 
 			itemV3.Fields.DescriptionMedia = descriptionMedia
+			itemV3.Fields.Unknowns = itemV2.Fields.Unknowns
 
 			// Mapping Comment with Attachment
 			for idx, comment := range itemV2.Fields.Comments.Comments {
