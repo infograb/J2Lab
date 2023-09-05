@@ -95,7 +95,7 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 				log.Warnf("Unable to find media in Description with ID %s", id)
 			}
 		}
-		description, err := formatDescription(jiraIssue.Key, jiraIssue.Fields.Description, descriptionMediaMarkdown, userMap, true)
+		description, err := formatDescription(jiraIssue, descriptionMediaMarkdown, userMap, true)
 		if err != nil {
 			return nil, errors.Wrap(err, "Error formatting description")
 		}

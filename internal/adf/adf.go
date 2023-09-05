@@ -37,12 +37,12 @@ type Media struct {
 
 // TODO: []*ADFBlock -> *ADF
 
-func AdfToGitLabMarkdown(blocks []*ADFBlock, mediaMarkdown []*Media, userMap UserMap, isProject bool) (string, error) {
+func AdfToGitLabMarkdown(adf *ADF, mediaMarkdown []*Media, userMap UserMap, isProject bool) (string, error) {
 	var md strings.Builder
 
 	mediaCount := 0
 
-	for _, block := range blocks {
+	for _, block := range adf.Content {
 		switch block.Type {
 		case "blockquote":
 			md.WriteString("> " + block.Content[0].Content[0].Text + "\n")
