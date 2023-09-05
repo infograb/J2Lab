@@ -25,8 +25,7 @@ func formatNote(issueKey string, jiraComment *jirax.Comment, mediaMarkdown []*ad
 	commentLink := fmt.Sprintf("%s/browse/%s?focusedCommentId=%s", cfg.Jira.Host, issueKey, jiraComment.ID)
 	dateFormat := fmt.Sprintf("%s at %s", created.Format("January 02, 2006"), created.Format("3:04 PM"))
 
-	adfBlock := jiraComment.Body.Content
-	markdownBody, err := adf.AdfToGitLabMarkdown(adfBlock, mediaMarkdown, adf.UserMap(userMap), isProject)
+	markdownBody, err := adf.AdfToGitLabMarkdown(jiraComment.Body, mediaMarkdown, adf.UserMap(userMap), isProject)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "Error converting ADF to GitLab Markdown")
 	}
@@ -36,17 +35,16 @@ func formatNote(issueKey string, jiraComment *jirax.Comment, mediaMarkdown []*ad
 	return &result, &created, nil
 }
 
-func formatDescription(issueKey string, content *adf.ADF, mediaMarkdown []*adf.Media, userMap UserMap, isProject bool) (*string, error) {
+func formatDescription(issue *jirax.Issue, mediaMarkdown []*adf.Media, userMap UserMap, isProject bool) (*string, error) {
 	cfg, err := config.GetConfig()
 	if err != nil {
 		return nil, errors.Wrap(err, "Error getting config")
 	}
 
-	adfBlock := content.Content
-	markdownDescription, err := adf.AdfToGitLabMarkdown(adfBlock, mediaMarkdown, adf.UserMap(userMap), isProject)
+	markdownDescription, err := adf.AdfToGitLabMarkdown(issue.Fields.Description, mediaMarkdown, adf.UserMap(userMap), isProject)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error converting ADF to GitLab Markdown")
 	}
-	result := fmt.Sprintf("%s\n\nImported from Jira [%s](%s/browse/%s)", markdownDescription, issueKey, cfg.Jira.Host, issueKey)
+	result := fmt.Sprintf("%s\n\nImported from Jira [%s](%s/browse/%s)", markdownDescription, issue.Key, cfg.Jira.Host, issue.Key)
 	return &result, nil
 }

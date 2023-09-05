@@ -3,23 +3,23 @@ package j2g
 import (
 	"fmt"
 
-	jira "github.com/andygrunwald/go-jira/v2/cloud"
 	"github.com/pkg/errors"
 	gitlab "github.com/xanzy/go-gitlab"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/adf"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/jirax"
 )
 
 func newUserMap(gl *gitlab.Client, jiraIssues []*jirax.Issue, users map[string]int) (UserMap, error) {
-	jiraUsers, err := GetJiraUsersFromIssues(jiraIssues)
+	jiraUserAccountIds, err := GetJiraUsersFromIssues(jiraIssues)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error getting Jira users from issues")
 	}
 
 	userMap := make(UserMap)
-	for _, jiraUser := range jiraUsers {
-		gitlabID, ok := users[jiraUser.AccountID]
+	for _, jiraUserAccountId := range jiraUserAccountIds {
+		gitlabID, ok := users[jiraUserAccountId]
 		if !ok {
-			return nil, errors.New(fmt.Sprintf("No GitLab user found for Jira account ID %s (%s)", jiraUser.AccountID, jiraUser.DisplayName))
+			return nil, errors.New(fmt.Sprintf("No GitLab user found for Jira account ID %s", jiraUserAccountId))
 		}
 
 		user, _, err := gl.Users.GetUser(gitlabID, gitlab.GetUsersOptions{}) //! 병렬
@@ -27,32 +27,52 @@ func newUserMap(gl *gitlab.Client, jiraIssues []*jirax.Issue, users map[string]i
 			return nil, errors.Wrap(err, fmt.Sprintf("Error getting GitLab user %d", gitlabID))
 		}
 
-		userMap[jiraUser.AccountID] = user
+		userMap[jiraUserAccountId] = user
 	}
 
 	return userMap, nil
 }
 
-func GetJiraUsersFromIssues(issues []*jirax.Issue) ([]*jira.User, error) {
-	jiraAccountIds := make(map[string]*jira.User)
-	for _, jiraIssue := range issues {
+// @Ouput: Jira User List
+func GetJiraUsersFromIssues(issues []*jirax.Issue) ([]string, error) {
+	userIds := make([]string, 0)
+	for _, issue := range issues {
 		// TODO: API를 분석해서 User를 판단할 구석을 만들어야 함
-		// TODO: Check User Mention
-		assignee := jiraIssue.Fields.Assignee
-		reporter := jiraIssue.Fields.Reporter
+		assignee := issue.Fields.Assignee
+		reporter := issue.Fields.Reporter
 
+		//* Assignee
 		if assignee != nil {
-			jiraAccountIds[assignee.AccountID] = assignee
+			userIds = append(userIds, assignee.AccountID)
 		}
+
+		//* Reporter
 		if reporter != nil {
-			jiraAccountIds[reporter.AccountID] = reporter
+			userIds = append(userIds, reporter.AccountID)
+		}
+
+		//* Description
+		newUserAccountIds := adf.FindMentionIDs(issue.Fields.Description)
+		userIds = append(userIds, newUserAccountIds...)
+
+		//* Comment
+		for _, comment := range issue.Fields.Comments.Comments {
+			newUserIds := adf.FindMentionIDs(comment.Body)
+			userIds = append(userIds, newUserIds...)
 		}
 	}
 
-	users := make([]*jira.User, 0)
-	for _, user := range jiraAccountIds {
-		users = append(users, user)
+	jiraAccountIds := make(map[string]bool)
+	for _, userAccountId := range userIds {
+		jiraAccountIds[userAccountId] = true
 	}
 
-	return users, nil
+	result := make([]string, len(jiraAccountIds))
+	idx := 0
+	for userId := range jiraAccountIds {
+		result[idx] = userId
+		idx++
+	}
+
+	return result, nil
 }
