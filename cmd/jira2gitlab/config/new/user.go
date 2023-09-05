@@ -1,6 +1,7 @@
 package new
 
 import (
+	"context"
 	"os"
 
 	"github.com/pkg/errors"
@@ -44,23 +45,28 @@ func runConfigNewUser(io *utils.IOStreams) error {
 		return errors.Wrap(err, "Error getting Jira issues")
 	}
 
-	users, err := j2g.GetJiraUsersFromIssues(append(jiraEpics, jiraIssues...))
+	userAccountIds, err := j2g.GetJiraUsersFromIssues(append(jiraEpics, jiraIssues...))
 	if err != nil {
 		return errors.Wrap(err, "Error getting Jira users")
 	}
 
 	file, err := os.Create("users.csv")
 	if err != nil {
-		return err
+		return errors.Wrap(err, "Error creating file")
 	}
 
 	if _, err = file.WriteString("Jira Account ID,Jira Display Name,GitLab User ID\n"); err != nil {
-		return err
+		return errors.Wrap(err, "Error writing to file")
 	}
 
-	for _, user := range users {
+	for _, userAccountId := range userAccountIds {
+		user, _, err := jr.User.Get(context.Background(), userAccountId)
+		if err != nil {
+			return errors.Wrap(err, "Error getting Jira user")
+		}
+
 		if _, err = file.WriteString(user.AccountID + "," + user.DisplayName + ",\n"); err != nil {
-			return err
+			return errors.Wrap(err, "Error writing to file")
 		}
 	}
 
