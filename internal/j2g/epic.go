@@ -2,31 +2,32 @@ package j2g
 
 import (
 	"fmt"
+	"regexp"
 	"time"
 
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
 	"github.com/pkg/errors"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/adf"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/config"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/gitlabx"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/jirax"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/utils"
+	"golang.org/x/sync/errgroup"
 )
 
 func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue *jirax.Issue, userMap UserMap) (*gitlab.Epic, error) {
+	log := logrus.WithField("jiraEpic", jiraIssue.Key)
+	var g errgroup.Group
+	g.SetLimit(5)
+
 	cfg, err := config.GetConfig()
 	if err != nil {
 		return nil, errors.Wrap(err, "Error getting config")
 	}
 
 	gid := cfg.Project.GitLab.Epic
-
-	description, err := formatDescription(jiraIssue.Key, jiraIssue.Fields.Description, []*adf.Media{}, userMap, false)
-	if err != nil {
-		return nil, errors.Wrap(err, "Error formatting description")
-	}
 
 	labels, err := convertJiraToGitLabLabels(gl, jr, gid, jiraIssue, true)
 	if err != nil {
@@ -35,11 +36,70 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 
 	gitlabCreateEpicOptions := gitlabx.CreateEpicOptions{
 		Title:        gitlab.String(jiraIssue.Fields.Summary),
-		Description:  description,
 		Color:        utils.RandomColor(),
 		CreatedAt:    (*time.Time)(&jiraIssue.Fields.Created),
 		Labels:       labels,
 		DueDateFixed: (*gitlab.ISOTime)(&jiraIssue.Fields.Duedate),
+	}
+
+	//* Attachment for Description and Comments
+	//! Epic Attachment는 API가 없는 관계로 우회한다.
+	// 1. cfg.Project.GitLab.Issue 프로젝트에 attachement를 붙인다.
+	// 2. 결과 markdown을 절대 경로로 바꾼 후 epic description에 붙인다
+	pid := cfg.Project.GitLab.Issue
+	usedAttachment := make(map[string]bool)
+
+	markdownList := make(map[string]*adf.Media) // ID -> Markdown
+	for _, jiraAttachment := range jiraIssue.Fields.Attachments {
+		g.Go(func(jiraAttachment *jira.Attachment) func() error {
+			return func() error {
+				attachment, err := convertJiraAttachmentToMarkdown(gl, jr, pid, jiraAttachment)
+				if err != nil {
+					return errors.Wrap(err, "Error converting Jira attachment to GitLab attachment")
+				}
+
+				regexp := regexp.MustCompile(`!\[(.+)\]\((.+)\)`)
+				matches := regexp.FindStringSubmatch(attachment.Markdown)
+
+				if len(matches) != 3 {
+					return errors.Wrap(err, "Error parsing markdown")
+				}
+
+				alt := matches[1]
+				url := matches[2]
+
+				absUrl := fmt.Sprintf("%s/%s/%s", cfg.GitLab.Host, cfg.Project.GitLab.Issue, url)
+
+				markdownList[attachment.ID] = &adf.Media{
+					Markdown:  fmt.Sprintf("![%s](%s)", alt, absUrl),
+					CreatedAt: attachment.CreatedAt,
+				}
+				log.Debugf("Converted attachment: %s to %s", attachment.ID, attachment.Markdown)
+				return nil
+			}
+		}(jiraAttachment))
+	}
+
+	if err := g.Wait(); err != nil {
+		return nil, errors.Wrap(err, "Error converting Jira attachment to GitLab attachment")
+	}
+
+	//* Description -> Description
+	if jiraIssue.Fields.Description != nil {
+		var descriptionMediaMarkdown []*adf.Media
+		for _, id := range jiraIssue.Fields.DescriptionMedia {
+			if markdown, ok := markdownList[id]; ok {
+				descriptionMediaMarkdown = append(descriptionMediaMarkdown, markdown)
+				usedAttachment[id] = true
+			} else {
+				log.Warnf("Unable to find media in Description with ID %s", id)
+			}
+		}
+		description, err := formatDescription(jiraIssue.Key, jiraIssue.Fields.Description, descriptionMediaMarkdown, userMap, true)
+		if err != nil {
+			return nil, errors.Wrap(err, "Error formatting description")
+		}
+		gitlabCreateEpicOptions.Description = description
 	}
 
 	//* StartDate
@@ -70,38 +130,62 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 
 	//* Comment -> Comment
 	for _, jiraComment := range jiraIssue.Fields.Comments.Comments {
-		options, err := convertToIssueNoteOptions(jiraIssue.Key, jiraComment, []*adf.Media{}, userMap, false)
-		if err != nil {
-			return nil, errors.Wrap(err, "Error converting Jira comment to GitLab comment")
+		var commentMediaMarkdown []*adf.Media
+		for _, id := range jiraComment.BodyMedia {
+			if markdown, ok := markdownList[id]; ok {
+				commentMediaMarkdown = append(commentMediaMarkdown, markdown)
+				usedAttachment[id] = true
+			} else {
+				log.Warnf("Unable to find media in Comment with ID %s", id)
+			}
 		}
 
-		createEpicNoteOptions := gitlab.CreateEpicNoteOptions{
-			Body: options.Body,
-		}
+		g.Go(func(jiraComment *jirax.Comment) func() error {
+			return func() error {
+				body, _, err := formatNote(jiraIssue.Key, jiraComment, commentMediaMarkdown, userMap, true)
+				if err != nil {
+					return errors.Wrap(err, "Error formatting comment")
+				}
 
-		_, _, err = gl.Notes.CreateEpicNote(gid, gitlabEpic.ID, &createEpicNoteOptions)
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("Error creating GitLab comment with gid %s, epic ID %d", gid, gitlabEpic.ID))
-		}
+				createEpicNoteOptions := gitlab.CreateEpicNoteOptions{
+					Body: body,
+				}
+
+				_, _, err = gl.Notes.CreateEpicNote(gid, gitlabEpic.ID, &createEpicNoteOptions)
+				if err != nil {
+					return errors.Wrap(err, "Error creating note")
+				}
+				return nil
+			}
+		}(jiraComment))
 	}
 
-	//* attachment -> comments의 attachment
-	// TODO: 그룹에서 attachement를 붙이는 API 없다!
-	// for _, jiraAttachment := range jiraIssue.Fields.Attachments {
-	// 	markdown := convertJiraAttachementToMarkdown(gl, jr, gid, jiraAttachment)
-	// 	createdAt, err := time.Parse("2006-01-02T15:04:05.000-0700", jiraAttachment.Created)
-	// 	if err != nil {
-	// 		log.Fatalf("Error parsing time: %s", err)
-	// 	}
+	if err := g.Wait(); err != nil {
+		return nil, errors.Wrap(err, fmt.Sprintf("Error creating GitLab comment with gid %s, epic ID %d", gid, gitlabEpic.ID))
+	}
 
-	// 	_, _, err = gl.Notes.CreateIssueNote(gid, gitlabEpic.IID, &gitlab.CreateIssueNoteOptions{
-	// 		Body:      &markdown,
-	// 		CreatedAt: &createdAt,
-	// 	})
-	// 	if err != nil {
-	// 		log.Fatalf("Error creating GitLab comment attachement: %s", err)
-	// 	}
-	// }
+	//* Reamin Attachment -> Comment
+	for id, markdown := range markdownList {
+		if used, ok := usedAttachment[id]; ok || used {
+			continue
+		}
+
+		g.Go(func(markdown *adf.Media) func() error {
+			return func() error {
+				_, _, err = gl.Notes.CreateEpicNote(gid, gitlabEpic.ID, &gitlab.CreateEpicNoteOptions{
+					Body: &markdown.Markdown,
+				})
+				if err != nil {
+					return errors.Wrap(err, "Error creating note")
+				}
+				return nil
+			}
+		}(markdown))
+	}
+
+	if err := g.Wait(); err != nil {
+		return nil, errors.Wrap(err, "Error creating GitLab issue")
+	}
 
 	//* Resolution -> Close issue (CloseAt)
 	if jiraIssue.Fields.Resolution != nil {

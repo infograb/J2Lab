@@ -122,7 +122,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 	//* Comment -> Comment
 	for _, jiraComment := range jiraIssue.Fields.Comments.Comments {
 		var commentMediaMarkdown []*adf.Media
-		for _, id := range jiraIssue.Fields.DescriptionMedia {
+		for _, id := range jiraComment.BodyMedia {
 			if markdown, ok := markdownList[id]; ok {
 				commentMediaMarkdown = append(commentMediaMarkdown, markdown)
 				usedAttachment[id] = true
@@ -133,12 +133,17 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 
 		g.Go(func(jiraComment *jirax.Comment) func() error {
 			return func() error {
-				options, err := convertToIssueNoteOptions(jiraIssue.Key, jiraComment, commentMediaMarkdown, userMap, true)
+				note, created, err := formatNote(jiraIssue.Key, jiraComment, commentMediaMarkdown, userMap, true)
 				if err != nil {
 					return errors.Wrap(err, "Error formatting comment")
 				}
 
-				_, _, err = gl.Notes.CreateIssueNote(pid, gitlabIssue.IID, options)
+				options := gitlab.CreateIssueNoteOptions{
+					Body:      note,
+					CreatedAt: created,
+				}
+
+				_, _, err = gl.Notes.CreateIssueNote(pid, gitlabIssue.IID, &options)
 				if err != nil {
 					return errors.Wrap(err, "Error creating note")
 				}
