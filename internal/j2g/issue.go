@@ -1,6 +1,7 @@
 package j2g
 
 import (
+	"sync"
 	"time"
 
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
@@ -17,6 +18,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 	log := logrus.WithField("jiraIssue", jiraIssue.Key)
 	var g errgroup.Group
 	g.SetLimit(5)
+	mutex := sync.RWMutex{}
 
 	cfg, err := config.GetConfig()
 	if err != nil {
@@ -49,10 +51,12 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 					return errors.Wrap(err, "Error converting Jira attachment to GitLab attachment")
 				}
 
+				mutex.Lock()
 				markdownList[attachment.ID] = &adf.Media{
 					Markdown:  attachment.Markdown,
 					CreatedAt: attachment.CreatedAt,
 				}
+				mutex.Unlock()
 				log.Debugf("Converted attachment: %s to %s", attachment.ID, attachment.Markdown)
 				return nil
 			}
