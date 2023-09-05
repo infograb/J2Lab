@@ -35,8 +35,6 @@ type Media struct {
 	CreatedAt string
 }
 
-// TODO: []*ADFBlock -> *ADF
-
 func AdfToGitLabMarkdown(adf *ADF, mediaMarkdown []*Media, userMap UserMap, isProject bool) (string, error) {
 	var md strings.Builder
 
