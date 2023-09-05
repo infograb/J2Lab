@@ -3,6 +3,7 @@ package j2g
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
 	"github.com/pkg/errors"
@@ -46,6 +47,7 @@ func GetJiraIssues(jr *jira.Client, jiraProjectID string, jql string) ([]*jirax.
 func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 	var g errgroup.Group
 	g.SetLimit(5)
+	mutex := sync.RWMutex{}
 
 	cfg, err := config.GetConfig()
 	if err != nil {
@@ -135,7 +137,11 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 				if err != nil {
 					return errors.Wrap(err, fmt.Sprintf("Error converting epic: %s", epic.Key))
 				}
+
+				mutex.Lock()
 				epicLinks[epic.Key] = &JiraEpicLink{epic, gitlabEpic}
+				mutex.Unlock()
+
 				return nil
 			}
 		}(jiraEpic))
@@ -148,22 +154,26 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 	//* Issue
 	log.Infof("Converting %d issues", len(jiraIssues))
 	for _, jiraIssue := range jiraIssues {
-		// g.Go(func(jiraIssue *jirax.Issue) func() error {
-		// 	return func() error {
-		log.Infof("Converting issue: %s", jiraIssue.Key)
-		gitlabIssue, err := ConvertJiraIssueToGitLabIssue(gl, jr, jiraIssue, userMap)
-		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("Error converting issue: %s", jiraIssue.Key))
-		}
+		g.Go(func(jiraIssue *jirax.Issue) func() error {
+			return func() error {
+				log.Infof("Converting issue: %s", jiraIssue.Key)
+				gitlabIssue, err := ConvertJiraIssueToGitLabIssue(gl, jr, jiraIssue, userMap)
+				if err != nil {
+					return errors.Wrap(err, fmt.Sprintf("Error converting issue: %s", jiraIssue.Key))
+				}
 
-		issueLinks[jiraIssue.Key] = &JiraIssueLink{jiraIssue, gitlabIssue}
-		// return nil
-		// 	}
-		// }(jiraIssue))
+				mutex.Lock()
+				issueLinks[jiraIssue.Key] = &JiraIssueLink{jiraIssue, gitlabIssue}
+				mutex.Unlock()
+
+				return nil
+			}
+		}(jiraIssue))
 	}
-	// if err := g.Wait(); err != nil {
-	// 	return errors.Wrap(err, "Error converting issue")
-	// }
+
+	if err := g.Wait(); err != nil {
+		return errors.Wrap(err, "Error converting issue")
+	}
 
 	//* Link
 	err = Link(gl, jr, epicLinks, issueLinks)

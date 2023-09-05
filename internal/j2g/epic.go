@@ -3,6 +3,7 @@ package j2g
 import (
 	"fmt"
 	"regexp"
+	"sync"
 	"time"
 
 	jira "github.com/andygrunwald/go-jira/v2/cloud"
@@ -21,6 +22,7 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 	log := logrus.WithField("jiraEpic", jiraIssue.Key)
 	var g errgroup.Group
 	g.SetLimit(5)
+	mutex := sync.RWMutex{}
 
 	cfg, err := config.GetConfig()
 	if err != nil {
@@ -70,10 +72,12 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 
 				absUrl := fmt.Sprintf("%s/%s/%s", cfg.GitLab.Host, cfg.Project.GitLab.Issue, url)
 
+				mutex.Lock()
 				markdownList[attachment.ID] = &adf.Media{
 					Markdown:  fmt.Sprintf("![%s](%s)", alt, absUrl),
 					CreatedAt: attachment.CreatedAt,
 				}
+				mutex.Unlock()
 				log.Debugf("Converted attachment: %s to %s", attachment.ID, attachment.Markdown)
 				return nil
 			}
