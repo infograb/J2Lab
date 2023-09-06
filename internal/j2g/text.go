@@ -9,13 +9,13 @@ import (
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/config"
 )
 
-func textToGitLabMarkdown(text string, userMap UserMap, attachments map[string]*Attachment, isProject bool) (*string, error) {
+func textToGitLabMarkdown(text string, userMap UserMap, attachments AttachmentMap, isProject bool) (string, error) {
 	// TODO
-	return nil, nil
+	return text, nil
 }
 
 // comment -> comments : GitLab 작성자는 API owner이지만, 텍스트로 Jira 작성자를 표현
-func formatNote(issueKey string, jiraComment *jira.Comment, userMap UserMap, attachments map[string]*Attachment, isProject bool) (*string, *time.Time, error) {
+func formatNote(issueKey string, jiraComment *jira.Comment, userMap UserMap, attachments AttachmentMap, isProject bool) (*string, *time.Time, error) {
 	created, err := time.Parse("2006-01-02T15:04:05.000-0700", jiraComment.Created)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "Error parsing time")
@@ -39,7 +39,7 @@ func formatNote(issueKey string, jiraComment *jira.Comment, userMap UserMap, att
 	return &result, &created, nil
 }
 
-func formatDescription(issue *jira.Issue, userMap UserMap, attachments map[string]*Attachment, isProject bool) (*string, error) {
+func formatDescription(issue *jira.Issue, userMap UserMap, attachments AttachmentMap, isProject bool) (*string, error) {
 	cfg, err := config.GetConfig()
 	if err != nil {
 		return nil, errors.Wrap(err, "Error getting config")

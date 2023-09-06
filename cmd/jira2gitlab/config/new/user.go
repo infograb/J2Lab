@@ -50,7 +50,7 @@ func runConfigNewUser(io *utils.IOStreams) error {
 		return errors.Wrap(err, "Error getting Jira issues")
 	}
 
-	userKeys, err := j2g.GetJiraUsersFromIssues(append(jiraEpics, jiraIssues...))
+	usernames, err := j2g.GetJiraUsernamesFromIssues(append(jiraEpics, jiraIssues...))
 	if err != nil {
 		return errors.Wrap(err, "Error getting Jira users")
 	}
@@ -63,11 +63,11 @@ func runConfigNewUser(io *utils.IOStreams) error {
 
 	//* Ask for confirmation to overwrite the file if it already exists
 	if fileExists {
-		fmt.Print("The 'users.csv' file already exists. Do you want to overwrite it? (yes/no): ")
+		fmt.Print("The 'users.csv' file already exists. Do you want to overwrite it? (y/n): ")
 		scanner := bufio.NewScanner(os.Stdin)
 		scanner.Scan()
 		answer := strings.ToLower(scanner.Text())
-		if answer != "yes" {
+		if answer != "y" {
 			logrus.Debugf("Exiting without overwriting the 'users.csv' file")
 			return nil
 		}
@@ -78,22 +78,19 @@ func runConfigNewUser(io *utils.IOStreams) error {
 		return errors.Wrap(err, "Error creating file")
 	}
 
-	if _, err = file.WriteString("Jira User Key,Jira Display Name,GitLab User ID\n"); err != nil {
+	if _, err = file.WriteString("Jira User Name,GitLab User ID\n"); err != nil {
 		return errors.Wrap(err, "Error writing to file")
 	}
 
-	for _, userKey := range userKeys {
-
-		options := &jirax.UserQueryOptions{
-			Key: userKey,
-		}
+	for _, username := range usernames {
+		options := &jirax.UserQueryOptions{Username: username}
 
 		user, _, err := jirax.GetUser(jr, options)
 		if err != nil {
-			return errors.Wrap(err, fmt.Sprintf("Error getting user %s", userKey))
+			return errors.Wrap(err, fmt.Sprintf("Error getting user %s", username))
 		}
 
-		if _, err = file.WriteString(user.Key + "," + user.DisplayName + ",\n"); err != nil {
+		if _, err = file.WriteString(user.Name + ",\n"); err != nil {
 			return errors.Wrap(err, "Error writing to file")
 		}
 	}

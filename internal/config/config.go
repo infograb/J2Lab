@@ -134,7 +134,7 @@ func parseUserCSVs() (map[string]int, error) {
 	}
 	defer file.Close()
 
-	userMap := make(map[string]int)
+	users := make(map[string]int)
 
 	// Read the file line by line
 	scanner := bufio.NewScanner(file)
@@ -142,22 +142,21 @@ func parseUserCSVs() (map[string]int, error) {
 	for scanner.Scan() {
 		line := scanner.Text()
 		parts := strings.Split(line, ",")
-		if len(parts) == 3 {
-			key := strings.TrimSpace(parts[0])
-			_ = strings.TrimSpace(parts[1]) // DisplayName
-			valueStr := strings.TrimSpace(parts[2])
+		if len(parts) == 2 {
+			username := strings.TrimSpace(parts[0]) //* Jira Username
+			valueStr := strings.TrimSpace(parts[1]) //* GitLab User ID
 
-			value, err := strconv.Atoi(valueStr)
+			gitlabUserId, err := strconv.Atoi(valueStr)
 			if err != nil {
 				log.Fatal("Error parsing user ID: users.csv must be in the format of <Jira Account ID>,<Jira Display Name>,<GitLab User ID>")
 			}
 
-			userMap[key] = value
+			users[username] = gitlabUserId
 		}
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, errors.Wrap(err, "Error reading users file")
 	}
 
-	return userMap, nil
+	return users, nil
 }

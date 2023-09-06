@@ -8,6 +8,8 @@ import (
 	gitlab "github.com/xanzy/go-gitlab"
 )
 
+type AttachmentMap map[string]*Attachment
+
 type Attachment struct {
 	Markdown  string
 	Name      string

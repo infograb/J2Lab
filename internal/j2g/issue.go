@@ -40,7 +40,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 	//* Attachment for Description and Comments
 	usedAttachment := make(map[string]bool)
 
-	attachments := make(map[string]*Attachment) // ID -> Markdown
+	attachments := make(AttachmentMap) // ID -> Markdown
 	for _, jiraAttachment := range jiraIssue.Fields.Attachments {
 		g.Go(func(jiraAttachment *jira.Attachment) func() error {
 			return func() error {
@@ -71,7 +71,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 
 	//* Assignee
 	if jiraIssue.Fields.Assignee != nil {
-		if assignee, ok := userMap[jiraIssue.Fields.Assignee.Key]; ok {
+		if assignee, ok := userMap[jiraIssue.Fields.Assignee.Name]; ok {
 			gitlabCreateIssueOptions.AssigneeIDs = &[]int{assignee.ID}
 		}
 	}

@@ -15,8 +15,6 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type UserMap map[string]*gitlab.User // Jria Account ID to GitLab ID
-
 func GetJiraIssues(jr *jira.Client, jiraProjectID string, jql string) ([]*jira.Issue, []*jira.Issue, error) {
 	//* JQL
 	var prefixJql string
