@@ -1,14 +1,18 @@
 package new
 
 import (
-	"context"
+	"bufio"
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/config"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/j2g"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/jirax"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/utils"
 )
 
@@ -41,7 +45,6 @@ func runConfigNewUser(io *utils.IOStreams) error {
 
 	jr := config.GetJiraClient(cfg.Jira)
 
-	// TODO: Unpagination
 	jiraEpics, jiraIssues, err := j2g.GetJiraIssues(jr, cfg.Project.Jira.Name, cfg.Project.Jira.Jql)
 	if err != nil {
 		return errors.Wrap(err, "Error getting Jira issues")
@@ -52,19 +55,42 @@ func runConfigNewUser(io *utils.IOStreams) error {
 		return errors.Wrap(err, "Error getting Jira users")
 	}
 
+	//* Check if the file already exists
+	fileExists := false
+	if _, err := os.Stat("users.csv"); err == nil {
+		fileExists = true
+	}
+
+	//* Ask for confirmation to overwrite the file if it already exists
+	if fileExists {
+		fmt.Print("The 'users.csv' file already exists. Do you want to overwrite it? (yes/no): ")
+		scanner := bufio.NewScanner(os.Stdin)
+		scanner.Scan()
+		answer := strings.ToLower(scanner.Text())
+		if answer != "yes" {
+			logrus.Debugf("Exiting without overwriting the 'users.csv' file")
+			return nil
+		}
+	}
+
 	file, err := os.Create("users.csv")
 	if err != nil {
 		return errors.Wrap(err, "Error creating file")
 	}
 
-	if _, err = file.WriteString("Jira Account ID,Jira Display Name,GitLab User ID\n"); err != nil {
+	if _, err = file.WriteString("Jira User Key,Jira Display Name,GitLab User ID\n"); err != nil {
 		return errors.Wrap(err, "Error writing to file")
 	}
 
 	for _, userKey := range userKeys {
-		user, _, err := jr.User.Get(context.Background(), userKey)
+
+		options := &jirax.UserQueryOptions{
+			Key: userKey,
+		}
+
+		user, _, err := jirax.GetUser(jr, options)
 		if err != nil {
-			return errors.Wrap(err, "Error getting Jira user")
+			return errors.Wrap(err, fmt.Sprintf("Error getting user %s", userKey))
 		}
 
 		if _, err = file.WriteString(user.Key + "," + user.DisplayName + ",\n"); err != nil {
