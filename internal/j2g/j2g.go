@@ -128,7 +128,7 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 	issueLinks := make(map[string]*JiraIssueLink)
 
 	//* Epic
-	log.Infof("Converting %d epics...", len(jiraEpics))
+	log.Infof("Converting %d epics", len(jiraEpics))
 	for _, jiraEpic := range jiraEpics {
 		g.Go(func(epic *jirax.Issue) func() error {
 			return func() error {
