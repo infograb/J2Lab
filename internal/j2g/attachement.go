@@ -3,14 +3,14 @@ package j2g
 import (
 	"context"
 
-	jira "github.com/andygrunwald/go-jira/v2/cloud"
+	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	"github.com/pkg/errors"
 	gitlab "github.com/xanzy/go-gitlab"
 )
 
 type Attachment struct {
 	Markdown  string
-	ID        string
+	Name      string
 	CreatedAt string
 }
 
@@ -31,7 +31,7 @@ func convertJiraAttachmentToMarkdown(gl *gitlab.Client, jr *jira.Client, id inte
 
 	return &Attachment{
 		Markdown:  gitlabUploadedFile.Markdown,
-		ID:        attachement.ID,
+		Name:      attachement.Filename,
 		CreatedAt: attachement.Created,
 	}, nil
 }

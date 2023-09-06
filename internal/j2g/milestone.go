@@ -3,7 +3,7 @@ package j2g
 import (
 	"time"
 
-	jira "github.com/andygrunwald/go-jira/v2/cloud"
+	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"

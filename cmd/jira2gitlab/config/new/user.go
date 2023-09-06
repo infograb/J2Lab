@@ -40,12 +40,14 @@ func runConfigNewUser(io *utils.IOStreams) error {
 	}
 
 	jr := config.GetJiraClient(cfg.Jira)
+
+	// TODO: Unpagination
 	jiraEpics, jiraIssues, err := j2g.GetJiraIssues(jr, cfg.Project.Jira.Name, cfg.Project.Jira.Jql)
 	if err != nil {
 		return errors.Wrap(err, "Error getting Jira issues")
 	}
 
-	userAccountIds, err := j2g.GetJiraUsersFromIssues(append(jiraEpics, jiraIssues...))
+	userKeys, err := j2g.GetJiraUsersFromIssues(append(jiraEpics, jiraIssues...))
 	if err != nil {
 		return errors.Wrap(err, "Error getting Jira users")
 	}
@@ -59,13 +61,13 @@ func runConfigNewUser(io *utils.IOStreams) error {
 		return errors.Wrap(err, "Error writing to file")
 	}
 
-	for _, userAccountId := range userAccountIds {
-		user, _, err := jr.User.Get(context.Background(), userAccountId)
+	for _, userKey := range userKeys {
+		user, _, err := jr.User.Get(context.Background(), userKey)
 		if err != nil {
 			return errors.Wrap(err, "Error getting Jira user")
 		}
 
-		if _, err = file.WriteString(user.AccountID + "," + user.DisplayName + ",\n"); err != nil {
+		if _, err = file.WriteString(user.Key + "," + user.DisplayName + ",\n"); err != nil {
 			return errors.Wrap(err, "Error writing to file")
 		}
 	}

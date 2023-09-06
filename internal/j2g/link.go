@@ -3,21 +3,20 @@ package j2g
 import (
 	"fmt"
 
-	jira "github.com/andygrunwald/go-jira/v2/cloud"
+	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	"github.com/pkg/errors"
 	gitlab "github.com/xanzy/go-gitlab"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/gitlabx"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/jirax"
 	"golang.org/x/sync/errgroup"
 )
 
 type JiraIssueLink struct {
-	*jirax.Issue
+	*jira.Issue
 	gitlabIssue *gitlab.Issue
 }
 
 type JiraEpicLink struct {
-	*jirax.Issue
+	*jira.Issue
 	gitlabEpic *gitlab.Epic
 }
 

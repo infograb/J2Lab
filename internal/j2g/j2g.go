@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	jira "github.com/andygrunwald/go-jira/v2/cloud"
+	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
@@ -17,7 +17,7 @@ import (
 
 type UserMap map[string]*gitlab.User // Jria Account ID to GitLab ID
 
-func GetJiraIssues(jr *jira.Client, jiraProjectID string, jql string) ([]*jirax.Issue, []*jirax.Issue, error) {
+func GetJiraIssues(jr *jira.Client, jiraProjectID string, jql string) ([]*jira.Issue, []*jira.Issue, error) {
 	//* JQL
 	var prefixJql string
 	if jql != "" {
@@ -130,7 +130,7 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 	//* Epic
 	log.Infof("Converting %d epics", len(jiraEpics))
 	for _, jiraEpic := range jiraEpics {
-		g.Go(func(epic *jirax.Issue) func() error {
+		g.Go(func(epic *jira.Issue) func() error {
 			return func() error {
 				log.Infof("Converting epic: %s", epic.Key)
 				gitlabEpic, err := ConvertJiraIssueToGitLabEpic(gl, jr, epic, userMap)
@@ -154,7 +154,7 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 	//* Issue
 	log.Infof("Converting %d issues", len(jiraIssues))
 	for _, jiraIssue := range jiraIssues {
-		g.Go(func(jiraIssue *jirax.Issue) func() error {
+		g.Go(func(jiraIssue *jira.Issue) func() error {
 			return func() error {
 				log.Infof("Converting issue: %s", jiraIssue.Key)
 				gitlabIssue, err := ConvertJiraIssueToGitLabIssue(gl, jr, jiraIssue, userMap)

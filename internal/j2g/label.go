@@ -3,15 +3,14 @@ package j2g
 import (
 	"fmt"
 
-	jira "github.com/andygrunwald/go-jira/v2/cloud"
+	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/jirax"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/utils"
 )
 
-func convertJiraToGitLabLabels(gl *gitlab.Client, jr *jira.Client, id interface{}, jiraIssue *jirax.Issue, isGroup bool) (*gitlab.Labels, error) {
+func convertJiraToGitLabLabels(gl *gitlab.Client, jr *jira.Client, id interface{}, jiraIssue *jira.Issue, isGroup bool) (*gitlab.Labels, error) {
 	labels := jiraIssue.Fields.Labels
 
 	//* Issue Type
