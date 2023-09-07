@@ -86,6 +86,16 @@ var testCases = []struct {
 		expected:    "\n~~asdf~~\n",
 		description: "Strikethrough",
 	},
+	{
+		input:       "\n\r{quote}asdf{quote}\n\r",
+		expected:    "\n> asdf\n",
+		description: "One line blockquote",
+	},
+	{
+		input:       "\n\r{quote}asdf\n\rasdf\n\r{quote}\n\r",
+		expected:    "\n> asdf\n> asdf\n> \n",
+		description: "Multi line blockquote",
+	},
 }
 
 var attachments = AttachmentMap{

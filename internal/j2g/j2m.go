@@ -26,16 +26,21 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, e
 			title: "Remove color: unsupported in md",
 			re:    regexp.MustCompile(`(?m)\{color:[^}]+\}(.*?)\{color\}`),
 			repl:  "$1",
-		},
-		{
+		}, {
 			title: "Remove unsupported line breaks",
 			re:    regexp.MustCompile(`(\r\n|\n\r)`),
 			repl:  "\n",
-		},
-		{
+		}, {
 			title: "Pre-formatted text",
 			re:    regexp.MustCompile(`{noformat}`),
 			repl:  "```",
+		}, {
+			title: "Backquote",
+			re:    regexp.MustCompile(`(?m)\{quote\}([^\{\}]+)\{quote\}`),
+			repl: func(groups []string) (string, error) {
+				_, content := groups[0], groups[1]
+				return "> " + strings.ReplaceAll(content, "\n", "\n> "), nil
+			},
 		},
 
 		//! 반드시 Code Block End가 먼저 나와야 한다.
@@ -43,8 +48,7 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, e
 			title: "Code Block End",
 			re:    regexp.MustCompile(`{code}`),
 			repl:  "\n```",
-		},
-		{
+		}, {
 			title: "Code Block",
 			re:    regexp.MustCompile(`\{code(:([a-z]+))?([:|]?(title|borderStyle|borderColor|borderWidth|bgColor|titleBGColor)=.+?)*\}`),
 			repl:  "```$2",
@@ -54,8 +58,7 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, e
 			title: "Monospaced text",
 			re:    regexp.MustCompile(`\{\{([^}]+)\}\}`),
 			repl:  "`$1`",
-		},
-		{
+		}, {
 			title: "panel into table",
 			re:    regexp.MustCompile(`(?m)\{panel:title=([^}]*)\}\n?(.*?)\n?\{panel\}`),
 			repl:  "\n| $1 |\n| --- |\n| $2 |",
@@ -161,11 +164,6 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, e
 			title: "Named Links",
 			re:    regexp.MustCompile(`\[(.+?)\|(.+?)\]`),
 			repl:  "[$1]($2)",
-		},
-		{
-			title: "Single Paragraph Blockquote",
-			re:    regexp.MustCompile(`(?m)^bq\.\s+`),
-			repl:  "> ",
 		},
 		{
 			title: "table",
