@@ -16,7 +16,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue *jira.Issue, userMap UserMap) (*gitlab.Epic, error) {
+func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue *jira.Issue, userMap UserMap, existingLabels map[string]string) (*gitlab.Epic, error) {
 	log := logrus.WithField("jiraEpic", jiraIssue.Key)
 	var g errgroup.Group
 	g.SetLimit(5)
@@ -29,7 +29,7 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 
 	gid := cfg.Project.GitLab.Epic
 
-	labels, err := convertJiraToGitLabLabels(gl, jr, gid, jiraIssue, true)
+	labels, err := convertJiraToGitLabLabels(gl, gid, jiraIssue, existingLabels, true)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error converting Jira labels to GitLab labels")
 	}

@@ -13,7 +13,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue *jira.Issue, userMap UserMap) (*gitlab.Issue, error) {
+func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue *jira.Issue, userMap UserMap, existingLabels map[string]string) (*gitlab.Issue, error) {
 	log := logrus.WithField("jiraIssue", jiraIssue.Key)
 	var g errgroup.Group
 	g.SetLimit(5)
@@ -26,7 +26,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 
 	pid := cfg.Project.GitLab.Issue
 
-	labels, err := convertJiraToGitLabLabels(gl, jr, pid, jiraIssue, false)
+	labels, err := convertJiraToGitLabLabels(gl, pid, jiraIssue, existingLabels, false)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error converting Jira labels to GitLab labels")
 	}
