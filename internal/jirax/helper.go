@@ -28,7 +28,8 @@ func UnpaginateIssue(
 
 		//* Mapping Media
 		for _, itemV2 := range itemsV2 {
-			result = append(result, &itemV2)
+			item := itemV2
+			result = append(result, &item)
 		}
 
 		if err != nil {
