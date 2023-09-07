@@ -4,11 +4,19 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 func CheckErr(err error) {
-	if err != nil {
-		fmt.Printf("Error: %+v\n", err)
+	if logrus.GetLevel() >= logrus.DebugLevel {
+		if err != nil {
+			fmt.Printf("Error: %+v\n", err)
+		}
+	} else {
+		if err != nil {
+			fmt.Printf("Error: %v\n", err)
+		}
 	}
 }
 

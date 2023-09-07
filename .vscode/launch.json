@@ -11,8 +11,8 @@
       "mode": "auto",
       "program": "main.go",
       // "args": ["config", "new", "user"]
-      "args": ["run"],
-      "envFile": "${workspaceFolder}/.env"
+      "args": ["run"]
+      // "envFile": "${workspaceFolder}/.env"
     }
   ]
 }

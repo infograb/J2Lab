@@ -2,11 +2,13 @@ package config
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 
+	"github.com/go-playground/validator"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/text/cases"
@@ -33,8 +35,7 @@ type Jira struct {
 
 type Config struct {
 	GitLab GitLab `yaml:"gitlab" validate:"required"`
-
-	Jira Jira `yaml:"jira"`
+	Jira   Jira   `yaml:"jira" validate:"required"`
 
 	Project struct {
 		Jira struct {
@@ -47,12 +48,12 @@ type Config struct {
 			} `yaml:"custom_field" mapstructure:"custom_field"`
 		} `yaml:"jira"`
 		GitLab struct {
-			Issue string `yaml:"issue" validate:"required"`
-			Epic  string `yaml:"epic"`
+			Issue string `yaml:"issue" validate:"required" mapstructure:"issue"`
+			Epic  string `yaml:"epic" validate:"required" mapstructure:"epic"`
 		} `yaml:"gitlab"`
 	} `yaml:"project"`
 
-	Users map[string]int `yaml:"users"`
+	Users map[string]int `yaml:"users" validate:"required" mapstructure:"users"`
 }
 
 var cfg *Config
@@ -80,6 +81,7 @@ func GetConfig() (*Config, error) {
 
 	envs := os.Environ()
 	for _, env := range envs {
+		fmt.Println(env)
 		parts := strings.Split(env, "=")
 		key := parts[0]
 		value := strings.Join(parts[1:], "=")
@@ -100,7 +102,10 @@ func GetConfig() (*Config, error) {
 
 	capitalizeJiraProject(cfg)
 
-	// TODO: Put validation here
+	validate := validator.New()
+	if err := validate.Struct(cfg); err != nil {
+		return nil, errors.Wrap(err, "Error validating config")
+	}
 
 	return cfg, nil
 }
