@@ -4,14 +4,22 @@ import (
 	"fmt"
 	"time"
 
+	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	"github.com/pkg/errors"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/adf"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/config"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/jirax"
 )
 
+func textToGitLabMarkdown(text string, userMap UserMap, attachments AttachmentMap, isProject bool) (string, error) {
+	result, err := JiraToMD(text, attachments, userMap)
+	if err != nil {
+		return "", errors.Wrap(err, "Error converting Jira to GitLab Markdown")
+	}
+
+	return result, nil
+}
+
 // comment -> comments : GitLab 작성자는 API owner이지만, 텍스트로 Jira 작성자를 표현
-func formatNote(issueKey string, jiraComment *jirax.Comment, mediaMarkdown []*adf.Media, userMap UserMap, isProject bool) (*string, *time.Time, error) {
+func formatNote(issueKey string, jiraComment *jira.Comment, userMap UserMap, attachments AttachmentMap, isProject bool) (*string, *time.Time, error) {
 	created, err := time.Parse("2006-01-02T15:04:05.000-0700", jiraComment.Created)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "Error parsing time")
@@ -25,7 +33,7 @@ func formatNote(issueKey string, jiraComment *jirax.Comment, mediaMarkdown []*ad
 	commentLink := fmt.Sprintf("%s/browse/%s?focusedCommentId=%s", cfg.Jira.Host, issueKey, jiraComment.ID)
 	dateFormat := fmt.Sprintf("%s at %s", created.Format("January 02, 2006"), created.Format("3:04 PM"))
 
-	markdownBody, err := adf.AdfToGitLabMarkdown(jiraComment.Body, mediaMarkdown, adf.UserMap(userMap), isProject)
+	markdownBody, err := textToGitLabMarkdown(jiraComment.Body, userMap, attachments, isProject)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "Error converting ADF to GitLab Markdown")
 	}
@@ -35,13 +43,13 @@ func formatNote(issueKey string, jiraComment *jirax.Comment, mediaMarkdown []*ad
 	return &result, &created, nil
 }
 
-func formatDescription(issue *jirax.Issue, mediaMarkdown []*adf.Media, userMap UserMap, isProject bool) (*string, error) {
+func formatDescription(issue *jira.Issue, userMap UserMap, attachments AttachmentMap, isProject bool) (*string, error) {
 	cfg, err := config.GetConfig()
 	if err != nil {
 		return nil, errors.Wrap(err, "Error getting config")
 	}
 
-	markdownDescription, err := adf.AdfToGitLabMarkdown(issue.Fields.Description, mediaMarkdown, adf.UserMap(userMap), isProject)
+	markdownDescription, err := textToGitLabMarkdown(issue.Fields.Description, userMap, attachments, isProject)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error converting ADF to GitLab Markdown")
 	}

@@ -1,14 +1,18 @@
 package new
 
 import (
-	"context"
+	"bufio"
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/config"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/j2g"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/jirax"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/utils"
 )
 
@@ -40,14 +44,33 @@ func runConfigNewUser(io *utils.IOStreams) error {
 	}
 
 	jr := config.GetJiraClient(cfg.Jira)
+
 	jiraEpics, jiraIssues, err := j2g.GetJiraIssues(jr, cfg.Project.Jira.Name, cfg.Project.Jira.Jql)
 	if err != nil {
 		return errors.Wrap(err, "Error getting Jira issues")
 	}
 
-	userAccountIds, err := j2g.GetJiraUsersFromIssues(append(jiraEpics, jiraIssues...))
+	usernames, err := j2g.GetJiraUsernamesFromIssues(append(jiraEpics, jiraIssues...))
 	if err != nil {
 		return errors.Wrap(err, "Error getting Jira users")
+	}
+
+	//* Check if the file already exists
+	fileExists := false
+	if _, err := os.Stat("users.csv"); err == nil {
+		fileExists = true
+	}
+
+	//* Ask for confirmation to overwrite the file if it already exists
+	if fileExists {
+		fmt.Print("The 'users.csv' file already exists. Do you want to overwrite it? (y/n): ")
+		scanner := bufio.NewScanner(os.Stdin)
+		scanner.Scan()
+		answer := strings.ToLower(scanner.Text())
+		if answer != "y" {
+			logrus.Debugf("Exiting without overwriting the 'users.csv' file")
+			return nil
+		}
 	}
 
 	file, err := os.Create("users.csv")
@@ -55,17 +78,19 @@ func runConfigNewUser(io *utils.IOStreams) error {
 		return errors.Wrap(err, "Error creating file")
 	}
 
-	if _, err = file.WriteString("Jira Account ID,Jira Display Name,GitLab User ID\n"); err != nil {
+	if _, err = file.WriteString("Jira User Name,GitLab User ID\n"); err != nil {
 		return errors.Wrap(err, "Error writing to file")
 	}
 
-	for _, userAccountId := range userAccountIds {
-		user, _, err := jr.User.Get(context.Background(), userAccountId)
+	for _, username := range usernames {
+		options := &jirax.UserQueryOptions{Username: username}
+
+		user, _, err := jirax.GetUser(jr, options)
 		if err != nil {
-			return errors.Wrap(err, "Error getting Jira user")
+			return errors.Wrap(err, fmt.Sprintf("Error getting user %s", username))
 		}
 
-		if _, err = file.WriteString(user.AccountID + "," + user.DisplayName + ",\n"); err != nil {
+		if _, err = file.WriteString(user.Name + ",\n"); err != nil {
 			return errors.Wrap(err, "Error writing to file")
 		}
 	}

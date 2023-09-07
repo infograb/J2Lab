@@ -4,13 +4,11 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 func CheckErr(err error) {
 	if err != nil {
-		log.Fatalf("%+v\n", err)
+		fmt.Printf("Error: %+v\n", err)
 	}
 }
 

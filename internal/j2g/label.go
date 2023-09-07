@@ -3,22 +3,21 @@ package j2g
 import (
 	"fmt"
 
-	jira "github.com/andygrunwald/go-jira/v2/cloud"
+	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/jirax"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/utils"
 )
 
-func convertJiraToGitLabLabels(gl *gitlab.Client, jr *jira.Client, id interface{}, jiraIssue *jirax.Issue, isGroup bool) (*gitlab.Labels, error) {
+func convertJiraToGitLabLabels(gl *gitlab.Client, jr *jira.Client, id interface{}, jiraIssue *jira.Issue, isGroup bool) (*gitlab.Labels, error) {
 	labels := jiraIssue.Fields.Labels
 
 	//* Issue Type
 	issueType := fmt.Sprintf("type::%s", jiraIssue.Fields.Type.Name)
 	label, err := createOrRetrieveLabel(gl, jr, id, issueType, jiraIssue.Fields.Type.Description, isGroup)
 	if err != nil {
-		return nil, errors.Wrap(err, "Error creating Issue Type label")
+		return nil, errors.Wrap(err, fmt.Sprintf("Error creating Issue Type label with %s", issueType))
 	}
 	labels = append(labels, label.Name)
 
@@ -27,7 +26,7 @@ func convertJiraToGitLabLabels(gl *gitlab.Client, jr *jira.Client, id interface{
 		name := fmt.Sprintf("component::%s", jiraComponent.Name)
 		label, err := createOrRetrieveLabel(gl, jr, id, name, jiraComponent.Description, isGroup)
 		if err != nil {
-			return nil, errors.Wrap(err, "Error creating Component label")
+			return nil, errors.Wrap(err, fmt.Sprintf("Error creating Component label with %s", name))
 		}
 		labels = append(labels, label.Name)
 	}
@@ -36,7 +35,7 @@ func convertJiraToGitLabLabels(gl *gitlab.Client, jr *jira.Client, id interface{
 	status := fmt.Sprintf("status::%s", jiraIssue.Fields.Status.Name)
 	label, err = createOrRetrieveLabel(gl, jr, id, status, jiraIssue.Fields.Status.Description, isGroup)
 	if err != nil {
-		return nil, errors.Wrap(err, "Error creating Status label")
+		return nil, errors.Wrap(err, fmt.Sprintf("Error creating Status label with %s", status))
 	}
 	labels = append(labels, label.Name)
 
@@ -44,7 +43,7 @@ func convertJiraToGitLabLabels(gl *gitlab.Client, jr *jira.Client, id interface{
 	priority := fmt.Sprintf("priority::%s", jiraIssue.Fields.Priority.Name)
 	label, err = createOrRetrieveLabel(gl, jr, id, priority, jiraIssue.Fields.Priority.Description, isGroup)
 	if err != nil {
-		return nil, errors.Wrap(err, "Error creating Priority label")
+		return nil, errors.Wrap(err, fmt.Sprintf("Error creating Priority label with %s", priority))
 	}
 	labels = append(labels, label.Name)
 
@@ -87,6 +86,8 @@ func createOrRetrieveLabel(gl *gitlab.Client, jr *jira.Client, id interface{}, n
 
 		log.Infof("Created label: %s", label.Name)
 		return label, nil
+	} else {
+		log.Debugf("Label %s already exists on project/group %s", name, id)
 	}
 
 	return label, nil
