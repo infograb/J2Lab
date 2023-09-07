@@ -22,13 +22,13 @@ import (
 
 type GitLab struct {
 	Host  string `yaml:"host" validate:"required,url"`
-	Token string `yaml:"token"`
+	Token string `yaml:"token" validate:"required"`
 }
 
 type Jira struct {
 	Host  string `yaml:"host" validate:"required,url"`
 	Email string `yaml:"email" validate:"required,email"`
-	Token string `yaml:"token"`
+	Token string `yaml:"token" validate:"required"`
 }
 
 type Config struct {
@@ -78,12 +78,29 @@ func GetConfig() (*Config, error) {
 		return nil, errors.Wrap(err, "Error unmarshalling config")
 	}
 
+	envs := os.Environ()
+	for _, env := range envs {
+		parts := strings.Split(env, "=")
+		key := parts[0]
+		value := strings.Join(parts[1:], "=")
+
+		//* Put Environment Variables here
+		switch key {
+		case "GITLAB_TOKEN":
+			cfg.GitLab.Token = value
+		case "JIRA_TOKEN":
+			cfg.Jira.Token = value
+		}
+	}
+
 	cfg.Users, err = parseUserCSVs()
 	if err != nil {
 		return nil, errors.Wrap(err, "Error parsing users.csv")
 	}
 
 	capitalizeJiraProject(cfg)
+
+	// TODO: Put validation here
 
 	return cfg, nil
 }
