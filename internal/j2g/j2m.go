@@ -75,7 +75,8 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, e
 			},
 		},
 		{ //* Mention
-			re: regexp.MustCompile(`(?m)\[~([^]]+)\]`),
+			title: "Mention",
+			re:    regexp.MustCompile(`(?m)\[~([^]]+)\]`),
 			repl: func(groups []string) (string, error) {
 				_, username := groups[0], groups[1]
 				if user, ok := userMap[username]; ok {
