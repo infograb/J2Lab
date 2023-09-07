@@ -76,6 +76,16 @@ var testCases = []struct {
 `,
 		description: "Table 3",
 	},
+	{
+		input:       "\n\r----\n\r",
+		expected:    "\n---\n",
+		description: "Rule",
+	},
+	{
+		input:       "\n\r-asdf-\n\r",
+		expected:    "\n~~asdf~~\n",
+		description: "Strikethrough",
+	},
 }
 
 var attachments = AttachmentMap{

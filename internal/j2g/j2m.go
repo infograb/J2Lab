@@ -17,7 +17,6 @@ type jiration struct {
 
 func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, error) {
 	//* TODO
-	// - rule
 	// - Citations (buggy)
 	// - Emoji
 
@@ -138,9 +137,15 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, e
 		},
 		{
 			title: "Subscript",
+			re:    regexp.MustCompile(`~([^~]*)~`),
+			repl:  "<sub>$1</sub>",
+		},
 
-			re:   regexp.MustCompile(`~([^~]*)~`),
-			repl: "<sub>$1</sub>",
+		//! Rule은 Strikethrough보다 먼저 나와야 한다.
+		{
+			title: "Rule",
+			re:    regexp.MustCompile(`-{4,}`),
+			repl:  "---",
 		},
 		{
 			title: "Strikethrough",
