@@ -1,0 +1,35 @@
+# display_name: J2Lab
+# lang_fw:
+# labels: Go, Jira, Gitlab, Docker
+# comment: 이 job은 Go viper 프로젝트를 사용하여 Jira를 GitLab으로 마이그레이션하는 데 사용됩니다.
+# comment: 'CONFIG' 환경 변수에는 Jira, GitLab 관련 정보가 들어있는 파일의 경로를 지정합니다.
+# comment: 'USER' 환경 변수에는 Jira Account ID, Jira Display Name, GitLab User ID 정보가 있는 파일의 경로를 지정합니다.
+# comment: 정보를 통해 Jira의 프로젝트를 GitLab으로 마이그레이션합니다.
+
+variables:
+  CONFIG_PATH:
+    value: "$CI_PROJECT_DIR/config.yaml"
+    description: Jira, GitLab 관련 정보가 들어있는 파일입니다.
+  GITLAB_TOKEN: #!
+    value: ""
+    description: "이 Job이 GitLab 프로젝트의 API를 호출하기 위한 GitLab Access Token으로, 범위(scope)는 `api`입니다."
+  JIRA_TOKEN: #!
+    value: ""
+    description: "Jira 프로젝트의 API를 호출하기 위한 Jira Access Token입니다."
+  USER_PATH:
+    value: "$CI_PROJECT_DIR/users.csv"
+    description: Jira Account ID,Jira Display Name,GitLab User ID 정보가 있는 파일입니다.
+
+default:
+  tags:
+    - kane
+
+j2lab:
+  stage: test
+  # image: j2lab job을 실행하는 데 필요한 Docker 이미지입니다.
+  image: registry.gitlab.com/infograb/team/devops/toy/gos/j2lab:latest
+  before_script:
+    - cp $CONFIG_PATH /app/config.yaml
+    - cp $USER_PATH /app/user.csv
+  script:
+    - /app/jira2gitlab run
