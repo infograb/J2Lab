@@ -41,7 +41,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 	//* Attachment for Description and Comments
 	usedAttachment := make(map[string]bool)
 
-	attachments := make(AttachmentMap) // TODO: Filename -> Markdown
+	attachments := make(AttachmentMap)
 	for _, jiraAttachment := range jiraIssue.Fields.Attachments {
 		g.Go(func(jiraAttachment *jira.Attachment) func() error {
 			return func() error {
@@ -64,11 +64,15 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 	}
 
 	//* Description -> Description
-	description, err := formatDescription(jiraIssue, userMap, attachments, true)
+	description, usedImages, err := formatDescription(jiraIssue, userMap, attachments, true)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error formatting description")
 	}
 	gitlabCreateIssueOptions.Description = description
+
+	for _, attachment := range usedImages {
+		usedAttachment[attachment] = true
+	}
 
 	//* Assignee
 	if jiraIssue.Fields.Assignee != nil {
@@ -113,9 +117,15 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 	for _, jiraComment := range jiraIssue.Fields.Comments.Comments {
 		g.Go(func(jiraComment *jira.Comment) func() error {
 			return func() error {
-				note, created, err := formatNote(jiraIssue.Key, jiraComment, userMap, attachments, true)
+				note, created, usedImages, err := formatNote(jiraIssue.Key, jiraComment, userMap, attachments, true)
 				if err != nil {
 					return errors.Wrap(err, "Error formatting comment")
+				}
+
+				for _, attachment := range usedImages {
+					mutex.Lock()
+					usedAttachment[attachment] = true
+					mutex.Unlock()
 				}
 
 				options := gitlab.CreateIssueNoteOptions{
