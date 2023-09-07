@@ -39,7 +39,7 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, e
 			re:    regexp.MustCompile(`(?m)\{quote\}([^\{\}]+)\{quote\}`),
 			repl: func(groups []string) (string, error) {
 				_, content := groups[0], groups[1]
-				return "> " + strings.ReplaceAll(content, "\n", "\n> "), nil
+				return "\n> " + strings.ReplaceAll(content, "\n", "\n> "), nil
 			},
 		},
 
