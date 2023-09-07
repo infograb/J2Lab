@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/config"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/gitlabx"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -30,7 +31,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 		return nil, errors.Wrap(err, "Error converting Jira labels to GitLab labels")
 	}
 
-	gitlabCreateIssueOptions := &gitlab.CreateIssueOptions{
+	gitlabCreateIssueOptions := &gitlabx.CreateIssueOptions{
 		Title:     &jiraIssue.Fields.Summary,
 		CreatedAt: (*time.Time)(&jiraIssue.Fields.Created),
 		DueDate:   (*gitlab.ISOTime)(&jiraIssue.Fields.Duedate),
@@ -73,6 +74,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 	if jiraIssue.Fields.Assignee != nil {
 		if assignee, ok := userMap[jiraIssue.Fields.Assignee.Name]; ok {
 			gitlabCreateIssueOptions.AssigneeIDs = &[]int{assignee.ID}
+			gitlabCreateIssueOptions.AssigneeID = &assignee.ID
 		}
 	}
 
@@ -101,7 +103,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 	}
 
 	//* 이슈를 생성합니다.
-	gitlabIssue, _, err := gl.Issues.CreateIssue(pid, gitlabCreateIssueOptions)
+	gitlabIssue, _, err := gitlabx.CreateIssue(gl, pid, gitlabCreateIssueOptions)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error creating GitLab issue")
 	}

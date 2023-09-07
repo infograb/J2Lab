@@ -24,7 +24,7 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, e
 		// 태그로 묶인 속성을 먼저 처리해야 한다.
 		{
 			title: "Remove color: unsupported in md",
-			re:    regexp.MustCompile(`(?m)\{color:[^}]+\}(.*)\{color\}`),
+			re:    regexp.MustCompile(`(?m)\{color:[^}]+\}(.*?)\{color\}`),
 			repl:  "$1",
 		},
 		{
