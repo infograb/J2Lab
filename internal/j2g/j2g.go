@@ -146,6 +146,40 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 		return errors.Wrap(err, "Error creating GitLab milestones")
 	}
 
+	//* Project and Group Labels
+	existingGroupLabels := make(map[string]string)
+	existingProjectLabels := make(map[string]string)
+
+	gruopLabels, err := gitlabx.Unpaginate[gitlab.GroupLabel](gl, func(opt *gitlab.ListOptions) ([]*gitlab.GroupLabel, *gitlab.Response, error) {
+		return gl.GroupLabels.ListGroupLabels(cfg.Project.GitLab.Epic, &gitlab.ListGroupLabelsOptions{
+			ListOptions:              *opt,
+			IncludeAncestorGroups:    gitlab.Bool(true),
+			IncludeDescendantGrouops: gitlab.Bool(true),
+			OnlyGroupLabels:          gitlab.Bool(true),
+		})
+	})
+	if err != nil {
+		return errors.Wrap(err, "Error getting GitLab group labels from GitLab")
+	}
+
+	for _, label := range gruopLabels {
+		existingGroupLabels[label.Name] = label.Name
+	}
+
+	projectLabels, err := gitlabx.Unpaginate[gitlab.Label](gl, func(opt *gitlab.ListOptions) ([]*gitlab.Label, *gitlab.Response, error) {
+		return gl.Labels.ListLabels(gitlabProject.ID, &gitlab.ListLabelsOptions{ListOptions: *opt,
+			IncludeAncestorGroups: gitlab.Bool(true),
+		})
+	})
+	if err != nil {
+		return errors.Wrap(err, "Error getting GitLab project labels from GitLab")
+	}
+
+	for _, label := range projectLabels {
+		existingProjectLabels[label.Name] = label.Name
+	}
+
+	//* Main Game
 	epicLinks := make(map[string]*JiraEpicLink)
 	issueLinks := make(map[string]*JiraIssueLink)
 
@@ -155,7 +189,7 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 		g.Go(func(epic *jira.Issue) func() error {
 			return func() error {
 				log.Infof("Converting epic: %s", epic.Key)
-				gitlabEpic, err := ConvertJiraIssueToGitLabEpic(gl, jr, epic, userMap)
+				gitlabEpic, err := ConvertJiraIssueToGitLabEpic(gl, jr, epic, userMap, existingGroupLabels)
 				if err != nil {
 					return errors.Wrap(err, fmt.Sprintf("Error converting epic: %s", epic.Key))
 				}
@@ -179,7 +213,7 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 		g.Go(func(jiraIssue *jira.Issue) func() error {
 			return func() error {
 				log.Infof("Converting issue: %s", jiraIssue.Key)
-				gitlabIssue, err := ConvertJiraIssueToGitLabIssue(gl, jr, jiraIssue, userMap)
+				gitlabIssue, err := ConvertJiraIssueToGitLabIssue(gl, jr, jiraIssue, userMap, existingProjectLabels)
 				if err != nil {
 					return errors.Wrap(err, fmt.Sprintf("Error converting issue: %s", jiraIssue.Key))
 				}
