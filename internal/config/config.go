@@ -43,6 +43,7 @@ type Config struct {
 			CustomField struct {
 				StoryPoint    string `yaml:"story_point" mapstructure:"story_point"`
 				EpicStartDate string `yaml:"epic_start_date" mapstructure:"epic_start_date"`
+				ParentEpic    string `yaml:"parent_epic" mapstructure:"parent_epic"`
 			} `yaml:"custom_field" mapstructure:"custom_field"`
 		} `yaml:"jira"`
 		GitLab struct {

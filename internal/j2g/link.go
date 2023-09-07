@@ -5,7 +5,9 @@ import (
 
 	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	"github.com/pkg/errors"
+	log "github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
+	"gitlab.com/infograb/team/devops/toy/j2lab/internal/config"
 	"gitlab.com/infograb/team/devops/toy/j2lab/internal/gitlabx"
 	"golang.org/x/sync/errgroup"
 )
@@ -40,15 +42,30 @@ func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*JiraEpicLink
 	var g errgroup.Group
 	g.SetLimit(5)
 
+	cfg, err := config.GetConfig()
+	if err != nil {
+		return errors.Wrap(err, "Error getting config")
+	}
+
 	//* Find the parent Issues or Epics
 	for _, jiraIssue := range issueLinks {
 		pid := fmt.Sprintf("%d", jiraIssue.gitlabIssue.ProjectID)
 
 		// Jira는 Epic의 부모 Epic이 없고, GitLab은 Epic이 다른 Epic의 부모가 될 수 있다.
-		if jiraIssue.Fields.Parent != nil {
-			parentKey := jiraIssue.Fields.Parent.Key
+		parentKey := ""
 
-			g.Go(func(jiraIssue *JiraIssueLink) func() error {
+		if cfg.Project.Jira.CustomField.ParentEpic != "" {
+			if parentEpic, ok := jiraIssue.Fields.Unknowns[cfg.Project.Jira.CustomField.ParentEpic]; ok {
+				if parentEpic != nil {
+					parentKey = parentEpic.(string)
+				}
+			}
+		} else if jiraIssue.Fields.Parent != nil {
+			parentKey = jiraIssue.Fields.Parent.Key
+		}
+
+		if parentKey != "" {
+			g.Go(func(jiraIssue *JiraIssueLink, parentKey string) func() error {
 				return func() error {
 					//* If this Issue has a parent Epic
 					if parentEpicLink, ok := epicLinks[parentKey]; ok {
@@ -58,6 +75,7 @@ func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*JiraEpicLink
 						if err != nil {
 							return errors.Wrap(err, fmt.Sprintf("Error linking GitLab issue %s with its parent epic %s", jiraIssue.Key, parentKey))
 						}
+						log.Infof("Linked issue %s to parent epic %s", jiraIssue.Key, parentKey)
 					}
 
 					//* If this Issue has a parent Issue (Subtask)
@@ -72,11 +90,11 @@ func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*JiraEpicLink
 						if err != nil {
 							return errors.Wrap(err, fmt.Sprintf("Error linking GitLab issue %s with its parent issue %s", jiraIssue.Key, parentKey))
 						}
+						log.Infof("Linked issue %s to parent issue %s", jiraIssue.Key, parentKey)
 					}
-
 					return nil
 				}
-			}(jiraIssue))
+			}(jiraIssue, parentKey))
 		}
 	}
 
@@ -114,6 +132,8 @@ func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*JiraEpicLink
 								if err != nil {
 									return errors.Wrap(err, fmt.Sprintf("Error Creating Issue link from %s to %s", jiraIssue.Key, outwardIssue.Key))
 								}
+
+								log.Infof("Linked issue %s to %s with link type %s", jiraIssue.Key, outwardIssue.Key, outwardType)
 								return nil
 							}
 						}(jiraIssue))
@@ -159,6 +179,8 @@ func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*JiraEpicLink
 									if err != nil {
 										return errors.Wrap(err, "Error creating GitLab epic link")
 									}
+
+									log.Infof("Linked epic %s to %s with link type %s", jiraIssue.Key, outwardIssue.Key, outwardType)
 									return nil
 								}
 							}(jiraIssue))
