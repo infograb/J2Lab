@@ -3,17 +3,22 @@ package j2g
 import (
 	"fmt"
 	"regexp"
+	"sync"
 
 	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	"github.com/pkg/errors"
 	gitlab "github.com/xanzy/go-gitlab"
+	"golang.org/x/sync/errgroup"
 )
 
-// TODO
 // Jira Username -> GitLab ID
 type UserMap map[string]*gitlab.User
 
 func newUserMap(gl *gitlab.Client, jiraIssues []*jira.Issue, users map[string]int) (UserMap, error) {
+	var g errgroup.Group
+	g.SetLimit(10)
+	mutex := sync.RWMutex{}
+
 	jiraUsernames, err := GetJiraUsernamesFromIssues(jiraIssues)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error getting Jira users from issues")
@@ -26,12 +31,20 @@ func newUserMap(gl *gitlab.Client, jiraIssues []*jira.Issue, users map[string]in
 			return nil, errors.New(fmt.Sprintf("No GitLab user found for Jira account ID %s", jiraUsername))
 		}
 
-		gitlabUser, _, err := gl.Users.GetUser(gitlabID, gitlab.GetUsersOptions{}) // TODO 병렬
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("Error getting GitLab user %d", gitlabID))
-		}
+		g.Go(func(gitlabID int, jiraUsername string) func() error {
+			return func() error {
+				gitlabUser, _, err := gl.Users.GetUser(gitlabID, gitlab.GetUsersOptions{})
+				if err != nil {
+					return errors.Wrap(err, fmt.Sprintf("Error getting GitLab user %d", gitlabID))
+				}
 
-		userMap[jiraUsername] = gitlabUser
+				mutex.Lock()
+				userMap[jiraUsername] = gitlabUser
+				mutex.Unlock()
+
+				return nil
+			}
+		}(gitlabID, jiraUsername))
 	}
 
 	return userMap, nil
