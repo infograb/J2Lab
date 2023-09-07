@@ -60,6 +60,9 @@ Jira Account ID, Jira Display Name, GitLab User ID
 <!-- TODO -->
 ### To start using j2lab
 
+```
+brew install ...
+```
 
 ### To start developing j2lab
 <!-- TODO 프로젝트 구조, 코드 설명 -->
