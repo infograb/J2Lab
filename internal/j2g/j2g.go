@@ -237,5 +237,7 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 		return errors.Wrap(err, "Error linking")
 	}
 
+	log.Infof("You are successfully migrated %s to %s", jiraProjectID, gitlabProjectPath)
+
 	return nil
 }

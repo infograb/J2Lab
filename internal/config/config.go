@@ -2,7 +2,6 @@ package config
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -81,7 +80,6 @@ func GetConfig() (*Config, error) {
 
 	envs := os.Environ()
 	for _, env := range envs {
-		fmt.Println(env)
 		parts := strings.Split(env, "=")
 		key := parts[0]
 		value := strings.Join(parts[1:], "=")

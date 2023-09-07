@@ -33,7 +33,6 @@ func init() {
 	ioStreams := utils.NewStdIOStreams()
 	log.SetOutput(ioStreams.ErrOut)
 	log.SetLevel(log.DebugLevel) // TODO Set log level from flag
-	log.SetReportCaller(true)
 
 	rootCmd.PersistentPreRun = func(cmd *cobra.Command, args []string) {
 		debug := viper.GetBool("debug")
