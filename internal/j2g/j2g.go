@@ -98,7 +98,7 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 		}
 
 		if !exist {
-			return errors.Errorf("User %s with id %s is not a member of GitLab project %s", user.Username, user.ID, gitlabProjectPath)
+			return errors.Errorf("User %s with id %d is not a member of GitLab project %s", user.Username, user.ID, gitlabProjectPath)
 		}
 	}
 
