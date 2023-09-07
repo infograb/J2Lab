@@ -10,8 +10,9 @@ import (
 )
 
 type jiration struct {
-	re   *regexp.Regexp
-	repl interface{}
+	title string
+	re    *regexp.Regexp
+	repl  interface{}
 }
 
 func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, error) {
@@ -22,38 +23,49 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, e
 
 	jirations := []jiration{
 		// 태그로 묶인 속성을 먼저 처리해야 한다.
-		{ //* Remove color: unsupported in md
-			re:   regexp.MustCompile(`(?m)\{color:[^}]+\}(.*)\{color\}`),
-			repl: "$1",
+		{
+			title: "Remove color: unsupported in md",
+			re:    regexp.MustCompile(`(?m)\{color:[^}]+\}(.*)\{color\}`),
+			repl:  "$1",
 		},
-		{ //* Remove unsupported line breaks
-			re:   regexp.MustCompile(`(\r\n|\n\r)`),
-			repl: "\n",
+		{
+			title: "Remove unsupported line breaks",
+			re:    regexp.MustCompile(`(\r\n|\n\r)`),
+			repl:  "\n",
 		},
-		{ //* Pre-formatted text
-			re:   regexp.MustCompile(`{noformat}`),
-			repl: "```",
+		{
+			title: "Pre-formatted text",
+			re:    regexp.MustCompile(`{noformat}`),
+			repl:  "```",
 		},
-		{ //* Code Block
-			re:   regexp.MustCompile(`\{code(:([a-z]+))?([:|]?(title|borderStyle|borderColor|borderWidth|bgColor|titleBGColor)=.+?)*\}`),
-			repl: "```$2",
+
+		//! 반드시 Code Block End가 먼저 나와야 한다.
+		{
+			title: "Code Block End",
+			re:    regexp.MustCompile(`{code}`),
+			repl:  "\n```",
 		},
-		{ //* Code Block End
-			re:   regexp.MustCompile(`{code}`),
-			repl: "```",
+		{
+			title: "Code Block",
+			re:    regexp.MustCompile(`\{code(:([a-z]+))?([:|]?(title|borderStyle|borderColor|borderWidth|bgColor|titleBGColor)=.+?)*\}`),
+			repl:  "```$2",
 		},
-		{ //* Monospaced text
-			re:   regexp.MustCompile(`\{\{([^}]+)\}\}`),
-			repl: "`$1`",
+
+		{
+			title: "Monospaced text",
+			re:    regexp.MustCompile(`\{\{([^}]+)\}\}`),
+			repl:  "`$1`",
 		},
-		{ //* panel into table
-			re:   regexp.MustCompile(`(?m)\{panel:title=([^}]*)\}\n?(.*?)\n?\{panel\}`),
-			repl: "\n| $1 |\n| --- |\n| $2 |",
+		{
+			title: "panel into table",
+			re:    regexp.MustCompile(`(?m)\{panel:title=([^}]*)\}\n?(.*?)\n?\{panel\}`),
+			repl:  "\n| $1 |\n| --- |\n| $2 |",
 		},
 
 		// 이후
-		{ //* image
-			re: regexp.MustCompile(`(?m)!([^!|]+)(?:\|([^!|]+))?!`),
+		{
+			title: "image",
+			re:    regexp.MustCompile(`(?m)!([^!|]+)(?:\|([^!|]+))?!`),
 			repl: func(groups []string) (string, error) {
 				_, name, _ := groups[0], groups[1], groups[2]
 				if attachment, ok := attachments[name]; ok {
@@ -74,71 +86,84 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, e
 				}
 			},
 		},
-		{ //* UnOrdered Lists
-			re: regexp.MustCompile(`(?m)^[ \t]*(\*+)\s+`),
+		{
+			title: "UnOrdered Lists",
+			re:    regexp.MustCompile(`(?m)^[ \t]*(\*+)\s+`),
 			repl: func(groups []string) (string, error) {
 				_, stars := groups[0], groups[1]
 				return strings.Repeat("  ", len(stars)-1) + "* ", nil
 			},
 		},
-		{ //* Ordered Lists
-			re: regexp.MustCompile(`(?m)^[ \t]*(#+)\s+`),
+		{
+			title: "Ordered Lists",
+			re:    regexp.MustCompile(`(?m)^[ \t]*(#+)\s+`),
 			repl: func(groups []string) (string, error) {
 				_, nums := groups[0], groups[1]
 				return strings.Repeat("  ", len(nums)-1) + "1. ", nil
 			},
 		},
-		{ //* Headers 1-6
-			re: regexp.MustCompile(`(?m)^h([0-6])\.(.*)$`),
+		{
+			title: "Headers 1-6",
+			re:    regexp.MustCompile(`(?m)^h([0-6])\.(.*)$`),
 			repl: func(groups []string) (string, error) {
 				_, level, content := groups[0], groups[1], groups[2]
 				i, _ := strconv.Atoi(level)
 				return strings.Repeat("#", i) + content, nil
 			},
 		},
-		{ //* Bold
-			re:   regexp.MustCompile(`\{\*\}(\S[^*]*)\{\*\}`),
-			repl: "**$1**",
+		{
+			title: "Bold",
+			re:    regexp.MustCompile(`\{\*\}(\S[^*]*)\{\*\}`),
+			repl:  "**$1**",
 		},
-		{ //* Italic
-			re:   regexp.MustCompile(`\{\_\}(\S[^_]*)\{\_\}`),
-			repl: "*$1*",
+		{
+			title: "Italic",
+			re:    regexp.MustCompile(`\{\_\}(\S[^_]*)\{\_\}`),
+			repl:  "*$1*",
 		},
-		// { //* Citations (buggy)
+		// /* Citations (buggy)",
+		// {
 		// 	re:   regexp.MustCompile(`\?\?((?:.[^?]|[^?].)+)\?\?`),
 		// 	repl: "<cite>$1</cite>",
 		// },
-		{ //* Inserts
-			re:   regexp.MustCompile(`\{\+\}([^+]*)\{\+\}`),
-			repl: "<ins>$1</ins>",
+		{
+			title: "Inserts",
+			re:    regexp.MustCompile(`\{\+\}([^+]*)\{\+\}`),
+			repl:  "<ins>$1</ins>",
 		},
-		{ //* Superscript
-			re:   regexp.MustCompile(`\^([^^]*)\^`),
-			repl: "<sup>$1</sup>",
+		{
+			title: "Superscript",
+			re:    regexp.MustCompile(`\^([^^]*)\^`),
+			repl:  "<sup>$1</sup>",
 		},
-		{ //* Subscript
+		{
+			title: "Subscript",
 
 			re:   regexp.MustCompile(`~([^~]*)~`),
 			repl: "<sub>$1</sub>",
 		},
-		{ //* Strikethrough
-			re:   regexp.MustCompile(`(\s+)-(\S+.*?\S)-(\s+)`),
-			repl: "$1~~$2~~$3",
+		{
+			title: "Strikethrough",
+			re:    regexp.MustCompile(`(\s+)-(\S+.*?\S)-(\s+)`),
+			repl:  "$1~~$2~~$3",
 		},
 		// { //* n-named Links
 		// 	re:   regexp.MustCompile(`(?U)\[([^|]+?)\]`),
 		// 	repl: "<$1>",
 		// },
-		{ //* Named Links
-			re:   regexp.MustCompile(`\[(.+?)\|(.+?)\]`),
-			repl: "[$1]($2)",
+		{
+			title: "Named Links",
+			re:    regexp.MustCompile(`\[(.+?)\|(.+?)\]`),
+			repl:  "[$1]($2)",
 		},
-		{ //* Single Paragraph Blockquote
-			re:   regexp.MustCompile(`(?m)^bq\.\s+`),
-			repl: "> ",
+		{
+			title: "Single Paragraph Blockquote",
+			re:    regexp.MustCompile(`(?m)^bq\.\s+`),
+			repl:  "> ",
 		},
-		{ //* table
-			re: regexp.MustCompile(`(?m)\|\|(([^|\n\r]+)\|\|)+?(\r?\n\|(([^|\n\r]+?)\|)+)+`),
+		{
+			title: "table",
+			re:    regexp.MustCompile(`(?m)\|\|(([^|\n\r]+)\|\|)+?(\r?\n\|(([^|\n\r]+?)\|)+)+`),
 			repl: func(groups []string) (string, error) {
 				reHeader := regexp.MustCompile(`(?m)^(\|\|(?:[^|\n\r]+?\|\|)+)`)
 				reRows := regexp.MustCompile(`(?m)\r?\n(\|(?:[^|\n\r]+?\|)+)`)
@@ -184,6 +209,7 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, e
 	}
 
 	for _, jiration := range jirations {
+		// log.Debugf("Substituting '%s'", jiration.title)
 		switch v := jiration.repl.(type) {
 		case string:
 			str = jiration.re.ReplaceAllString(str, v)
