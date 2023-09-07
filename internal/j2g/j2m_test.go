@@ -124,7 +124,7 @@ var userMap = UserMap{
 
 func TestJiraToMD(t *testing.T) {
 	for _, tc := range testCases {
-		actual, err := JiraToMD(tc.input, attachments, userMap)
+		actual, _, err := JiraToMD(tc.input, attachments, userMap)
 		if err != nil {
 			t.Errorf("Error: %s", err)
 		}

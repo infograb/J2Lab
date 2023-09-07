@@ -15,10 +15,12 @@ type jiration struct {
 	repl  interface{}
 }
 
-func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, error) {
+func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, []string, error) {
 	//* TODO
 	// - Citations (buggy)
 	// - Emoji
+
+	usedAttachments := []string{}
 
 	jirations := []jiration{
 		// 태그로 묶인 속성을 먼저 처리해야 한다.
@@ -71,6 +73,7 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, e
 			repl: func(groups []string) (string, error) {
 				_, name, _ := groups[0], groups[1], groups[2]
 				if attachment, ok := attachments[name]; ok {
+					usedAttachments = append(usedAttachments, name)
 					return attachment.Markdown, nil
 				} else {
 					return "", errors.Errorf("attachment not found: %s", name)
@@ -220,15 +223,15 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, e
 		case func([]string) (string, error):
 			newStr, err := replaceAllStringSubmatchFunc(jiration.re, str, v)
 			if err != nil {
-				return "", errors.Wrap(err, "JiraToMD")
+				return "", nil, errors.Wrap(err, "JiraToMD")
 			} else {
 				str = newStr
 			}
 		default:
-			return "", errors.Errorf("unknown type: %v", v)
+			return "", nil, errors.Errorf("unknown type: %v", v)
 		}
 	}
-	return str, nil
+	return str, usedAttachments, nil
 }
 
 func replaceAllStringSubmatchFunc(re *regexp.Regexp, str string, repl func([]string) (string, error)) (string, error) {
