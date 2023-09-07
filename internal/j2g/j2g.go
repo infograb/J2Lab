@@ -58,24 +58,48 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 
 	jiraProject, _, err := jr.Project.Get(context.Background(), jiraProjectID)
 	if err != nil {
-		return errors.Wrap(err, "Error getting Jira project: %s")
+		return errors.Wrap(err, fmt.Sprintf("Error getting Jira project: %s", jiraProjectID))
 	}
 
 	gitlabProject, _, err := gl.Projects.GetProject(gitlabProjectPath, nil)
 	if err != nil {
-		return errors.Wrap(err, "Error getting GitLab project: %s")
+		return errors.Wrap(err, fmt.Sprintf("Error getting GitLab project: %s", gitlabProjectPath))
 	}
 
 	//* Get Jira Issues
 	jiraEpics, jiraIssues, err := GetJiraIssues(jr, jiraProjectID, cfg.Project.Jira.Jql)
 	if err != nil {
-		return errors.Wrap(err, "Error getting Jira issues: %s")
+		return errors.Wrap(err, fmt.Sprintf("Error getting Jira issues: %s", jiraProjectID))
 	}
 
 	//* User Map
 	userMap, err := newUserMap(gl, append(jiraEpics, jiraIssues...), cfg.Users)
 	if err != nil {
 		return errors.Wrap(err, "Error creating user map")
+	}
+
+	//* Check if Users are members of GitLab project
+	// TODO : Unpaginate
+
+	gitlabProjectMembers, err := gitlabx.Unpaginate[gitlab.ProjectMember](gl, func(opt *gitlab.ListOptions) ([]*gitlab.ProjectMember, *gitlab.Response, error) {
+		return gl.ProjectMembers.ListAllProjectMembers(gitlabProjectPath, &gitlab.ListProjectMembersOptions{ListOptions: *opt})
+	})
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("Error getting GitLab project members: %s", gitlabProjectPath))
+	}
+
+	for _, user := range userMap {
+		exist := false
+		for _, member := range gitlabProjectMembers {
+			if member.Username == user.Username {
+				exist = true
+				break
+			}
+		}
+
+		if !exist {
+			return errors.Errorf("User %s with id %s is not a member of GitLab project %s", user.Username, user.ID, gitlabProjectPath)
+		}
 	}
 
 	//* Project Description
