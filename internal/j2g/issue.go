@@ -40,7 +40,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 	//* Attachment for Description and Comments
 	usedAttachment := make(map[string]bool)
 
-	attachments := make(AttachmentMap) // ID -> Markdown
+	attachments := make(AttachmentMap) // TODO: Filename -> Markdown
 	for _, jiraAttachment := range jiraIssue.Fields.Attachments {
 		g.Go(func(jiraAttachment *jira.Attachment) func() error {
 			return func() error {
@@ -50,9 +50,9 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 				}
 
 				mutex.Lock()
-				attachments[jiraAttachment.ID] = attachment
+				attachments[jiraAttachment.Filename] = attachment
 				mutex.Unlock()
-				log.Debugf("Converted attachment: %s to %s", jiraAttachment.ID, attachment.Markdown)
+				log.Debugf("Converted attachment: %s to %s", jiraAttachment.Filename, attachment.Markdown)
 				return nil
 			}
 		}(jiraAttachment))

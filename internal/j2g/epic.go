@@ -49,7 +49,7 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 	pid := cfg.Project.GitLab.Issue
 	usedAttachment := make(map[string]bool)
 
-	attachments := make(map[string]*Attachment) // ID -> Markdown
+	attachments := make(map[string]*Attachment) // Filename -> Markdown
 	for _, jiraAttachment := range jiraIssue.Fields.Attachments {
 		g.Go(func(jiraAttachment *jira.Attachment) func() error {
 			return func() error {
@@ -71,13 +71,13 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 				absUrl := fmt.Sprintf("%s/%s/%s", cfg.GitLab.Host, cfg.Project.GitLab.Issue, url)
 
 				mutex.Lock()
-				attachments[jiraAttachment.ID] = &Attachment{
+				attachments[jiraAttachment.Filename] = &Attachment{
 					Markdown:  fmt.Sprintf("![%s](%s)", alt, absUrl),
 					Name:      attachment.Name,
 					CreatedAt: attachment.CreatedAt,
 				}
 				mutex.Unlock()
-				log.Debugf("Converted attachment: %s to %s", jiraAttachment.ID, attachment.Markdown)
+				log.Debugf("Converted attachment: %s to %s", jiraAttachment.Filename, attachment.Markdown)
 				return nil
 			}
 		}(jiraAttachment))

@@ -10,8 +10,12 @@ import (
 )
 
 func textToGitLabMarkdown(text string, userMap UserMap, attachments AttachmentMap, isProject bool) (string, error) {
-	// TODO
-	return text, nil
+	result, err := JiraToMD(text, attachments, userMap)
+	if err != nil {
+		return "", errors.Wrap(err, "Error converting Jira to GitLab Markdown")
+	}
+
+	return result, nil
 }
 
 // comment -> comments : GitLab 작성자는 API owner이지만, 텍스트로 Jira 작성자를 표현

@@ -2,6 +2,7 @@ package j2g
 
 import (
 	"fmt"
+	"regexp"
 
 	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	"github.com/pkg/errors"
@@ -54,16 +55,21 @@ func GetJiraUsernamesFromIssues(issues []*jira.Issue) ([]string, error) {
 			usernameArray = append(usernameArray, reporter.Name)
 		}
 
+		re := regexp.MustCompile(`(?m)\[~([^]]+)\]`)
+
 		//* Description
-		// TODO
-		// userIds = append(userIds, newUserAccountIds...)
+		newUserAccountIds := re.FindAllStringSubmatch(issue.Fields.Description, -1)
+		for _, newUserAccountId := range newUserAccountIds {
+			usernameArray = append(usernameArray, newUserAccountId[1])
+		}
 
 		//* Comment
-		// TODO
-		// for _, comment := range issue.Fields.Comments.Comments {
-		// 	newUserIds := adf.FindMentionIDs(comment.Body)
-		// 	userIds = append(userIds, newUserIds...)
-		// }
+		for _, comment := range issue.Fields.Comments.Comments {
+			newUserIds := re.FindAllStringSubmatch(comment.Body, -1)
+			for _, newUserId := range newUserIds {
+				usernameArray = append(usernameArray, newUserId[1])
+			}
+		}
 	}
 
 	usernameMap := make(map[string]bool)

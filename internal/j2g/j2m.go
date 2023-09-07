@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type jiration struct {
@@ -12,152 +14,215 @@ type jiration struct {
 	repl interface{}
 }
 
-func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) string {
-	// TODO
-	// - mention
+func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, error) {
+	//* TODO
 	// - rule
-	// - image
 	// - Citations (buggy)
+	// - Emoji
 
 	jirations := []jiration{
-		//* Mention
-		{
-			re: regexp.MustCompile(`(?m)\[~([^]]+)\]`),
-		},
-
-		// ---
-		{ // UnOrdered Lists
-			re: regexp.MustCompile(`(?m)^[ \t]*(\*+)\s+`),
-			repl: func(groups []string) string {
-				_, stars := groups[0], groups[1]
-				return strings.Repeat("  ", len(stars)-1) + "* "
-			},
-		},
-		{ //Ordered Lists
-			re: regexp.MustCompile(`(?m)^[ \t]*(#+)\s+`),
-			repl: func(groups []string) string {
-				_, nums := groups[0], groups[1]
-				return strings.Repeat("  ", len(nums)-1) + "1. "
-			},
-		},
-		{ //Headers 1-6
-			re: regexp.MustCompile(`(?m)^h([0-6])\.(.*)$`),
-			repl: func(groups []string) string {
-				_, level, content := groups[0], groups[1], groups[2]
-				i, _ := strconv.Atoi(level)
-				return strings.Repeat("#", i) + content
-			},
-		},
-		{ // Bold
-			re:   regexp.MustCompile(`\*(\S[^*]*)\*`),
-			repl: "**$1**",
-		},
-		{ // Italic
-			re:   regexp.MustCompile(`\b\_(\S[^_]*)\_`),
-			repl: "*$1*",
-		},
-		{ // Monospaced text
-			re:   regexp.MustCompile(`\{\{([^}]+)\}\}`),
-			repl: "`$1`",
-		},
-		// { // Citations (buggy)
-		// 	re:   regexp.MustCompile(`\?\?((?:.[^?]|[^?].)+)\?\?`),
-		// 	repl: "<cite>$1</cite>",
-		// },
-		{ // Inserts
-			re:   regexp.MustCompile(`\+([^+]*)\+`),
-			repl: "<ins>$1</ins>",
-		},
-		{ // Superscript
-			re:   regexp.MustCompile(`\^([^^]*)\^`),
-			repl: "<sup>$1</sup>",
-		},
-		{ // Subscript
-			re:   regexp.MustCompile(`~([^~]*)~`),
-			repl: "<sub>$1</sub>",
-		},
-		{ // Strikethrough
-			re:   regexp.MustCompile(`(\s+)-(\S+.*?\S)-(\s+)`),
-			repl: "$1~~$2~~$3",
-		},
-		{ // Code Block
-			re:   regexp.MustCompile(`\{code(:([a-z]+))?([:|]?(title|borderStyle|borderColor|borderWidth|bgColor|titleBGColor)=.+?)*\}`),
-			repl: "```$2",
-		},
-		{ // Code Block End
-			re:   regexp.MustCompile(`{code}`),
-			repl: "```",
-		},
-		{ // Pre-formatted text
-			re:   regexp.MustCompile(`{noformat}`),
-			repl: "```",
-		},
-		{ // Un-named Links
-			re:   regexp.MustCompile(`(?U)\[([^|]+?)\]`),
-			repl: "<$1>",
-		},
-		{ // Images
-			re:   regexp.MustCompile(`!(.+)!`),
-			repl: "![]($1)",
-		},
-		{ // Named Links
-			re:   regexp.MustCompile(`\[(.+?)\|(.+?)\]`),
-			repl: "[$1]($2)",
-		},
-		{ // Single Paragraph Blockquote
-			re:   regexp.MustCompile(`(?m)^bq\.\s+`),
-			repl: "> ",
-		},
-		{ // Remove color: unsupported in md
+		// 태그로 묶인 속성을 먼저 처리해야 한다.
+		{ //* Remove color: unsupported in md
 			re:   regexp.MustCompile(`(?m)\{color:[^}]+\}(.*)\{color\}`),
 			repl: "$1",
 		},
-		{ // panel into table
+		{ //* Remove unsupported line breaks
+			re:   regexp.MustCompile(`(\r\n|\n\r)`),
+			repl: "\n",
+		},
+		{ //* Pre-formatted text
+			re:   regexp.MustCompile(`{noformat}`),
+			repl: "```",
+		},
+		{ //* Code Block
+			re:   regexp.MustCompile(`\{code(:([a-z]+))?([:|]?(title|borderStyle|borderColor|borderWidth|bgColor|titleBGColor)=.+?)*\}`),
+			repl: "```$2",
+		},
+		{ //* Code Block End
+			re:   regexp.MustCompile(`{code}`),
+			repl: "```",
+		},
+		{ //* Monospaced text
+			re:   regexp.MustCompile(`\{\{([^}]+)\}\}`),
+			repl: "`$1`",
+		},
+		{ //* panel into table
 			re:   regexp.MustCompile(`(?m)\{panel:title=([^}]*)\}\n?(.*?)\n?\{panel\}`),
 			repl: "\n| $1 |\n| --- |\n| $2 |",
 		},
-		{ //table header
-			re: regexp.MustCompile(`(?m)^[ \t]*((?:\|\|.*?)+\|\|)[ \t]*$`),
-			repl: func(groups []string) string {
-				_, headers := groups[0], groups[1]
-				reBarred := regexp.MustCompile(`\|\|`)
 
-				singleBarred := reBarred.ReplaceAllString(headers, "|")
-				fillerRe := regexp.MustCompile(`\|[^|]+`)
-				return "\n" + singleBarred + "\n" + fillerRe.ReplaceAllString(singleBarred, "| --- ")
+		// 이후
+		{ //* image
+			re: regexp.MustCompile(`(?m)!([^!|]+)(?:\|([^!|]+))?!`),
+			repl: func(groups []string) (string, error) {
+				_, name, _ := groups[0], groups[1], groups[2]
+				if attachment, ok := attachments[name]; ok {
+					return attachment.Markdown, nil
+				} else {
+					return "", errors.Errorf("attachment not found: %s", name)
+				}
 			},
 		},
-		{ // remove leading-space of table headers and rows
-			re:   regexp.MustCompile(`(?m)^[ \t]*\|`),
-			repl: "|",
+		{ //* Mention
+			re: regexp.MustCompile(`(?m)\[~([^]]+)\]`),
+			repl: func(groups []string) (string, error) {
+				_, username := groups[0], groups[1]
+				if user, ok := userMap[username]; ok {
+					return "@" + user.Username, nil
+				} else {
+					return "", errors.Errorf("user not found: %s", username)
+				}
+			},
+		},
+		{ //* UnOrdered Lists
+			re: regexp.MustCompile(`(?m)^[ \t]*(\*+)\s+`),
+			repl: func(groups []string) (string, error) {
+				_, stars := groups[0], groups[1]
+				return strings.Repeat("  ", len(stars)-1) + "* ", nil
+			},
+		},
+		{ //* Ordered Lists
+			re: regexp.MustCompile(`(?m)^[ \t]*(#+)\s+`),
+			repl: func(groups []string) (string, error) {
+				_, nums := groups[0], groups[1]
+				return strings.Repeat("  ", len(nums)-1) + "1. ", nil
+			},
+		},
+		{ //* Headers 1-6
+			re: regexp.MustCompile(`(?m)^h([0-6])\.(.*)$`),
+			repl: func(groups []string) (string, error) {
+				_, level, content := groups[0], groups[1], groups[2]
+				i, _ := strconv.Atoi(level)
+				return strings.Repeat("#", i) + content, nil
+			},
+		},
+		{ //* Bold
+			re:   regexp.MustCompile(`\{\*\}(\S[^*]*)\{\*\}`),
+			repl: "**$1**",
+		},
+		{ //* Italic
+			re:   regexp.MustCompile(`\{\_\}(\S[^_]*)\{\_\}`),
+			repl: "*$1*",
+		},
+		// { //* Citations (buggy)
+		// 	re:   regexp.MustCompile(`\?\?((?:.[^?]|[^?].)+)\?\?`),
+		// 	repl: "<cite>$1</cite>",
+		// },
+		{ //* Inserts
+			re:   regexp.MustCompile(`\{\+\}([^+]*)\{\+\}`),
+			repl: "<ins>$1</ins>",
+		},
+		{ //* Superscript
+			re:   regexp.MustCompile(`\^([^^]*)\^`),
+			repl: "<sup>$1</sup>",
+		},
+		{ //* Subscript
+
+			re:   regexp.MustCompile(`~([^~]*)~`),
+			repl: "<sub>$1</sub>",
+		},
+		{ //* Strikethrough
+			re:   regexp.MustCompile(`(\s+)-(\S+.*?\S)-(\s+)`),
+			repl: "$1~~$2~~$3",
+		},
+		// { //* n-named Links
+		// 	re:   regexp.MustCompile(`(?U)\[([^|]+?)\]`),
+		// 	repl: "<$1>",
+		// },
+		{ //* Named Links
+			re:   regexp.MustCompile(`\[(.+?)\|(.+?)\]`),
+			repl: "[$1]($2)",
+		},
+		{ //* Single Paragraph Blockquote
+			re:   regexp.MustCompile(`(?m)^bq\.\s+`),
+			repl: "> ",
+		},
+		{ //* table
+			re: regexp.MustCompile(`(?m)\|\|(([^|\n\r]+)\|\|)+?(\r?\n\|(([^|\n\r]+?)\|)+)+`),
+			repl: func(groups []string) (string, error) {
+				reHeader := regexp.MustCompile(`(?m)^(\|\|(?:[^|\n\r]+?\|\|)+)`)
+				reRows := regexp.MustCompile(`(?m)\r?\n(\|(?:[^|\n\r]+?\|)+)`)
+
+				headerMatches := reHeader.FindAllStringSubmatch(groups[0], -1)
+				rowMatches := reRows.FindAllStringSubmatch(groups[0], -1)
+
+				if len(headerMatches) == 0 || len(rowMatches) == 0 {
+					return "", errors.New("table header or rows not found")
+				}
+
+				headerstr := headerMatches[0][1]
+				rowStrs := []string{}
+				for _, rowMatch := range rowMatches {
+					rowStrs = append(rowStrs, rowMatch[1])
+				}
+
+				// Trim | on header and split into columns
+
+				headerColumns := strings.Split(strings.Trim(headerstr, "|"), "||")
+				rows := [][]string{}
+				for _, rowStr := range rowStrs {
+					rowColumns := strings.Split(strings.Trim(rowStr, "|"), "|")
+					if len(rowColumns) != len(headerColumns) {
+						return "", errors.Errorf("row column count not match: %d != %d", len(rowColumns), len(headerColumns))
+					}
+
+					rows = append(rows, rowColumns)
+				}
+
+				result := fmt.Sprintf("| %s |\n", strings.Join(headerColumns, " | "))
+				result += "|" + strings.Repeat(" --- |", len(headerColumns)) + "\n"
+				for _, row := range rows {
+					result += fmt.Sprintf("| %s |\n", strings.Join(row, " | "))
+				}
+
+				// trim last \n
+				result = result[:len(result)-1]
+
+				return result, nil
+			},
 		},
 	}
+
 	for _, jiration := range jirations {
 		switch v := jiration.repl.(type) {
 		case string:
 			str = jiration.re.ReplaceAllString(str, v)
-		case func([]string) string:
-			str = replaceAllStringSubmatchFunc(jiration.re, str, v)
+		case func([]string) (string, error):
+			newStr, err := replaceAllStringSubmatchFunc(jiration.re, str, v)
+			if err != nil {
+				return "", errors.Wrap(err, "JiraToMD")
+			} else {
+				str = newStr
+			}
 		default:
-			fmt.Printf("I don't know about type %T!\n", v)
+			return "", errors.Errorf("unknown type: %v", v)
 		}
 	}
-	return str
+	return str, nil
 }
 
-func replaceAllStringSubmatchFunc(re *regexp.Regexp, str string, repl func([]string) string) string {
+func replaceAllStringSubmatchFunc(re *regexp.Regexp, str string, repl func([]string) (string, error)) (string, error) {
 	result := ""
 	lastIndex := 0
 
 	for _, v := range re.FindAllSubmatchIndex([]byte(str), -1) {
 		groups := []string{}
 		for i := 0; i < len(v); i += 2 {
+			if v[i] == -1 {
+				groups = append(groups, "")
+				continue
+			}
 			groups = append(groups, str[v[i]:v[i+1]])
 		}
 
-		result += str[lastIndex:v[0]] + repl(groups)
+		r, err := repl(groups)
+		if err != nil {
+			return "", errors.Wrap(err, "replaceAllStringSubmatchFunc")
+		}
+
+		result += str[lastIndex:v[0]] + r
 		lastIndex = v[1]
 	}
 
-	return result + str[lastIndex:]
+	return result + str[lastIndex:], nil
 }
