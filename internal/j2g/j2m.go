@@ -36,45 +36,45 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, [
 			},
 		}, {
 			title: "Strong to Bold",
-			re:    regexp.MustCompile(`(?m)\*([^\s](?:[^\n\r*]*?[^\s])?)\*`),
-			repl:  "**$1**",
+			re:    regexp.MustCompile(`(?m)(^| +)\*([^\s](?:[^\n\r*]*?[^\s])?)\*($| +)`),
+			repl:  "$1**$2**$3",
 		}, {
 			title: "Emphasis to Italic",
-			re:    regexp.MustCompile(`(?m)_([^\s](?:[^\n\r_]*?[^\s])?)_`),
-			repl:  "*$1*",
+			re:    regexp.MustCompile(`(?m)(^| +)_([^\s](?:[^\n\r_]*?[^\s])?)_($| +)`),
+			repl:  "$1*$2*$3",
 		}, {
 			title: "Citiation to Italic",
-			re:    regexp.MustCompile(`(?m)\?\?([^\s](?:[^\n\r?]*?[^\s])?)\?\?`),
-			repl:  "*$1*",
+			re:    regexp.MustCompile(`(?m)(^| +)\?\?([^\s](?:[^\n\r?]*?[^\s])?)\?\?($| +)`),
+			repl:  "$1*$2*$3",
 		}, {
 			title: "Deleted to Strikethrough",
-			re:    regexp.MustCompile(`(?m)-([^\s](?:[^\n\r*]*?[^\s])?)-`),
+			re:    regexp.MustCompile(`(?m)(^| +)-([^\s](?:[^\n\r*]*?[^\s])?)-($| +)`),
 			repl: func(groups []string) (string, error) {
-				all, content := groups[0], groups[1]
+				all, before, content, after := groups[0], groups[1], groups[2], groups[3]
 				if len(content) == strings.Count(content, "-") {
 					return all, nil
 				}
-				return "<del>" + content + "</del>", nil
+				return before + "<del>" + content + "</del>" + after, nil
 			},
 		}, {
 			title: "Inserted to Underline",
-			re:    regexp.MustCompile(`(?m)\+([^\s](?:[^\n\r*]*?[^\s])?)\+`),
-			repl:  "<ins>$1</ins>",
+			re:    regexp.MustCompile(`(?m)(^| +)\+([^\s](?:[^\n\r*]*?[^\s])?)\+($| +)`),
+			repl:  "$1<ins>$2</ins>$3",
 		}, {
 			title: "Superscript",
-			re:    regexp.MustCompile(`(?m)\^([^\s](?:[^\n\r*]*?[^\s])?)\^`),
-			repl:  "<sup>$1</sup>",
+			re:    regexp.MustCompile(`(?m)(^| +)\^([^\s](?:[^\n\r*]*?[^\s])?)\^($| +)`),
+			repl:  "$1<sup>$2</sup>$3",
 		}, {
 			title: "Subscript",
-			re:    regexp.MustCompile(`(?m)~([^\s](?:[^\n\r*]*?[^\s])?)~`),
-			repl:  "<sub>$1</sub>",
+			re:    regexp.MustCompile(`(?m)(^| +)~([^\s](?:[^\n\r*]*?[^\s])?)~($| +)`),
+			repl:  "$1<sub>$2</sub>$3",
 		}, {
 			title: "Monospaced text Inline Code",
-			re:    regexp.MustCompile(`(?m)\{\{([^\s](?:[^\n\r*]*?[^\s])?)\}\}`),
-			repl:  "`$1`",
+			re:    regexp.MustCompile(`(?m)(^| +)\{\{([^\s](?:[^\n\r*]*?[^\s])?)\}\}($| +)`),
+			repl:  "$1`$2`$3",
 		}, {
 			title: "Blockquote to Blockquote",
-			re:    regexp.MustCompile(`(?m)^bq\.(.*)$`),
+			re:    regexp.MustCompile(`(?m)(^| +)bq\.(.*)$`),
 			repl:  "> $1",
 		}, {
 			title: "Quote to Blockquote",
