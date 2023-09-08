@@ -20,10 +20,6 @@ variables:
     value: "$CI_PROJECT_DIR/users.csv"
     description: Jira Account ID,Jira Display Name,GitLab User ID 정보가 있는 파일입니다.
 
-default:
-  tags:
-    - kane
-
 j2lab:
   stage: test
   # image: j2lab job을 실행하는 데 필요한 Docker 이미지입니다.
