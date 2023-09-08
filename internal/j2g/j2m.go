@@ -164,6 +164,20 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, [
 			},
 		},
 
+		//* Lists
+		{
+			title: "Unordered List to Unordered List",
+			re:    regexp.MustCompile(`(?m)(?:^| +)(\*+|-+)(?: )+([^\s].+)(\n+|$)`),
+			// repl:  "- $1\n",
+			repl: func(groups []string) (string, error) {
+				_, bullet, content, breaks := groups[0], groups[1], groups[2], groups[3]
+				depth := len(bullet) - 1
+				if breaks != "" {
+					breaks = strings.Repeat("\n", len(breaks)/2)
+				}
+				return strings.Repeat("  ", depth) + "- " + content + breaks, nil
+			},
+		},
 		//* Non-Official
 		// // 태그로 묶인 속성을 먼저 처리해야 한다.
 		// {
