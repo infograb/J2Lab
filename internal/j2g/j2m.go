@@ -166,16 +166,24 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, [
 
 		//* Lists
 		{
-			title: "Unordered List to Unordered List",
-			re:    regexp.MustCompile(`(?m)(?:^| +)(\*+|-+)(?: )+([^\s].+)(\n+|$)`),
-			// repl:  "- $1\n",
+			title: "All List to All List",
+			re:    regexp.MustCompile(`(?m)(?:^| +)([\*|\-|#]+)(?: )+([^\s].*)(\n+|$)`),
 			repl: func(groups []string) (string, error) {
-				_, bullet, content, breaks := groups[0], groups[1], groups[2], groups[3]
-				depth := len(bullet) - 1
+				_, bullets, content, breaks := groups[0], groups[1], groups[2], groups[3]
+				depth := len(bullets) - 1
 				if breaks != "" {
 					breaks = strings.Repeat("\n", len(breaks)/2)
 				}
-				return strings.Repeat("  ", depth) + "- " + content + breaks, nil
+
+				var bulletType string
+				switch bullets[len(bullets)-1] {
+				case '*', '-':
+					bulletType = "*"
+				case '#':
+					bulletType = "1."
+				}
+
+				return strings.Repeat("  ", depth) + bulletType + " " + content + breaks, nil
 			},
 		},
 		//* Non-Official
