@@ -35,7 +35,7 @@ func formatNote(issueKey string, jiraComment *jira.Comment, userMap UserMap, att
 
 	markdownBody, usedAttachments, err := textToGitLabMarkdown(jiraComment.Body, userMap, attachments, isProject)
 	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "Error converting ADF to GitLab Markdown")
+		return nil, nil, nil, errors.Wrap(err, "Error converting Text to GitLab Markdown")
 	}
 
 	result := fmt.Sprintf("%s\n\n%s by %s [[Original](%s)]",
@@ -51,7 +51,7 @@ func formatDescription(issue *jira.Issue, userMap UserMap, attachments Attachmen
 
 	markdownDescription, usedAttachments, err := textToGitLabMarkdown(issue.Fields.Description, userMap, attachments, isProject)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "Error converting ADF to GitLab Markdown")
+		return nil, nil, errors.Wrap(err, "Error converting Text to GitLab Markdown")
 	}
 	result := fmt.Sprintf("%s\n\nImported from Jira [%s](%s/browse/%s)", markdownDescription, issue.Key, cfg.Jira.Host, issue.Key)
 	return &result, usedAttachments, nil

@@ -1,6 +1,7 @@
 package j2g
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -21,14 +22,14 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 
 	cfg, err := config.GetConfig()
 	if err != nil {
-		return nil, errors.Wrap(err, "Error getting config")
+		return nil, errors.Wrap(err, fmt.Sprintf("Error getting config: issue %s", jiraIssue.Key))
 	}
 
 	pid := cfg.Project.GitLab.Issue
 
 	labels, err := convertJiraToGitLabLabels(gl, pid, jiraIssue, existingLabels, false)
 	if err != nil {
-		return nil, errors.Wrap(err, "Error converting Jira labels to GitLab labels")
+		return nil, errors.Wrap(err, fmt.Sprintf("Error converting Jira labels to GitLab labels: issue %s", jiraIssue.Key))
 	}
 
 	gitlabCreateIssueOptions := &gitlabx.CreateIssueOptions{
@@ -47,7 +48,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 			return func() error {
 				attachment, err := convertJiraAttachmentToMarkdown(gl, jr, pid, jiraAttachment)
 				if err != nil {
-					return errors.Wrap(err, "Error converting Jira attachment to GitLab attachment")
+					return errors.Wrap(err, fmt.Sprintf("Error converting Jira attachment to GitLab Markdown: %s on issue %s", jiraAttachment.Filename, jiraIssue.Key))
 				}
 
 				mutex.Lock()
@@ -60,13 +61,13 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 	}
 
 	if err := g.Wait(); err != nil {
-		return nil, errors.Wrap(err, "Error converting Jira attachment to GitLab attachment")
+		return nil, errors.Wrap(err, fmt.Sprintf("Error converting Jira attachment to GitLab Markdown: issue %s", jiraIssue.Key))
 	}
 
 	//* Description -> Description
 	description, usedImages, err := formatDescription(jiraIssue, userMap, attachments, true)
 	if err != nil {
-		return nil, errors.Wrap(err, "Error formatting description")
+		return nil, errors.Wrap(err, fmt.Sprintf("Error formatting description: issue %s", jiraIssue.Key))
 	}
 	gitlabCreateIssueOptions.Description = description
 
@@ -89,7 +90,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 		}, false)
 
 		if err != nil {
-			return nil, errors.Wrap(err, "Error creating GitLab milestone")
+			return nil, errors.Wrap(err, fmt.Sprintf("Error creating GitLab milestone: issue %s", jiraIssue.Key))
 		}
 
 		gitlabCreateIssueOptions.MilestoneID = &milestone.ID
@@ -109,7 +110,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 	//* 이슈를 생성합니다.
 	gitlabIssue, _, err := gitlabx.CreateIssue(gl, pid, gitlabCreateIssueOptions)
 	if err != nil {
-		return nil, errors.Wrap(err, "Error creating GitLab issue")
+		return nil, errors.Wrap(err, fmt.Sprintf("Error creating GitLab issue: issue %s", jiraIssue.Key))
 	}
 	log.Debugf("Created GitLab issue: %d from Jira issue: %s", gitlabIssue.IID, jiraIssue.Key)
 
@@ -119,7 +120,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 			return func() error {
 				note, created, usedImages, err := formatNote(jiraIssue.Key, jiraComment, userMap, attachments, true)
 				if err != nil {
-					return errors.Wrap(err, "Error formatting comment")
+					return errors.Wrap(err, fmt.Sprintf("Error formatting note: issue %s", jiraIssue.Key))
 				}
 
 				for _, attachment := range usedImages {
@@ -135,7 +136,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 
 				_, _, err = gl.Notes.CreateIssueNote(pid, gitlabIssue.IID, &options)
 				if err != nil {
-					return errors.Wrap(err, "Error creating note")
+					return errors.Wrap(err, fmt.Sprintf("Error creating note: issue %s", jiraIssue.Key))
 				}
 				return nil
 			}
@@ -143,7 +144,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 	}
 
 	if err := g.Wait(); err != nil {
-		return nil, errors.Wrap(err, "Error creating GitLab issue")
+		return nil, errors.Wrap(err, fmt.Sprintf("Error creating GitLab issue: issue %s", jiraIssue.Key))
 	}
 
 	//* Reamin Attachment -> Comment
@@ -154,7 +155,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 
 		createdAt, err := time.Parse("2006-01-02T15:04:05.000-0700", markdown.CreatedAt)
 		if err != nil {
-			return nil, errors.Wrap(err, "Error parsing time")
+			return nil, errors.Wrap(err, fmt.Sprintf("Error parsing time: issue %s", jiraIssue.Key))
 		}
 
 		g.Go(func(attachment *Attachment) func() error {
@@ -164,7 +165,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 					CreatedAt: &createdAt,
 				})
 				if err != nil {
-					return errors.Wrap(err, "Error creating note")
+					return errors.Wrap(err, fmt.Sprintf("Error creating note: issue %s", jiraIssue.Key))
 				}
 				return nil
 			}
@@ -172,7 +173,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 	}
 
 	if err := g.Wait(); err != nil {
-		return nil, errors.Wrap(err, "Error creating GitLab issue")
+		return nil, errors.Wrap(err, fmt.Sprintf("Error creating GitLab issue: issue %s", jiraIssue.Key))
 	}
 
 	//* Resolution -> Close issue (CloseAt)
