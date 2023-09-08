@@ -112,18 +112,59 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, [
 
 		//* Links
 		{
-			title: "Achor to Anchor Link",
+			title: "Achor to Anchor Link", // TODO but removed currently
 			re:    regexp.MustCompile(`(?m)\[(?:(.+)\|)?#([^|\n\r]+)\]`),
 			repl: func(groups []string) (string, error) {
 				_, name, anchor := groups[0], groups[1], groups[2]
 				if name == "" {
 					name = anchor
 				}
-				return "[" + name + "](#" + anchor + ")", nil
+				// return "[" + name + "](#" + anchor + ")", nil
+				return name, nil
+			},
+		}, {
+			title: "Link to Link",
+			re:    regexp.MustCompile(`(?m)\[(?:(.+)\|)?([^#][^|\n\r]+)\]`),
+			repl: func(groups []string) (string, error) {
+				all, name, link := groups[0], groups[1], groups[2]
+				if name == "" {
+					name = link
+				}
+
+				if strings.HasPrefix(link, "http") {
+					return "[" + name + "](" + link + ")", nil
+				}
+
+				return all, nil
+			},
+		}, {
+			title: "Mailto to Mailto Link",
+			re:    regexp.MustCompile(`(?m)(^| +)\[mailto:([^\s]+)\]($| +)`),
+			repl:  "$1[$2✉️](mailto:$2)$3",
+		}, {
+			title: "Anchor name to Anchor Link", // TODO but removed currently
+			re:    regexp.MustCompile(`(?m)(^| +)\{anchor:.+\}($| +)`),
+			repl:  "$1$3",
+		}, {
+			title: "Mention to Mention",
+			re:    regexp.MustCompile(`(?m)^(.*)\[~([^]]+)\](.*)$`),
+			repl: func(groups []string) (string, error) {
+				_, before, username, after := groups[0], groups[1], groups[2], groups[3]
+				if user, ok := userMap[username]; ok {
+					if before != "" && before[len(before)-1] != ' ' {
+						before += " "
+					}
+					if after != "" && after[0] != ' ' {
+						after = " " + after
+					}
+					return before + "@" + user.Username + after, nil
+				} else {
+					return "", errors.Errorf("user not found: %s", username)
+				}
 			},
 		},
 
-		// //* Non-Official
+		//* Non-Official
 		// // 태그로 묶인 속성을 먼저 처리해야 한다.
 		// {
 		// 	title: "Pre-formatted text",
@@ -171,18 +212,6 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, [
 		// 		} else {
 		// 			log.Debugf("attachment not found: %s", name)
 		// 			return fmt.Sprintf("![%s](%s)", name, name), nil
-		// 		}
-		// 	},
-		// },
-		// { //* Mention
-		// 	title: "Mention",
-		// 	re:    regexp.MustCompile(`(?m)\[~([^]]+)\]`),
-		// 	repl: func(groups []string) (string, error) {
-		// 		_, username := groups[0], groups[1]
-		// 		if user, ok := userMap[username]; ok {
-		// 			return "@" + user.Username, nil
-		// 		} else {
-		// 			return "", errors.Errorf("user not found: %s", username)
 		// 		}
 		// 	},
 		// },

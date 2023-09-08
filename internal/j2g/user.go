@@ -47,6 +47,10 @@ func newUserMap(gl *gitlab.Client, jiraIssues []*jira.Issue, users map[string]in
 		}(gitlabID, jiraUsername))
 	}
 
+	if err := g.Wait(); err != nil {
+		return nil, errors.Wrap(err, "Error getting GitLab users")
+	}
+
 	return userMap, nil
 }
 
