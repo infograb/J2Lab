@@ -89,7 +89,10 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, [
 			title: "Color to None",
 			re:    regexp.MustCompile(`(?m)\{color:.+?\}((?:.|\s)*?)\{color\}`),
 			repl:  "$1",
-		}, {
+		},
+
+		//* Text Breaks
+		{
 			title: "// to \n\n",
 			re:    regexp.MustCompile(`(?m)^([^\\]*)\\\\([^\\]*)$`),
 			repl:  "$1\n\n$2",
@@ -107,15 +110,22 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, [
 			repl:  "$1---$2",
 		},
 
-		//* Text Breaks
+		//* Links
+		{
+			title: "Achor to Anchor Link",
+			re:    regexp.MustCompile(`(?m)\[(?:(.+)\|)?#([^|\n\r]+)\]`),
+			repl: func(groups []string) (string, error) {
+				_, name, anchor := groups[0], groups[1], groups[2]
+				if name == "" {
+					name = anchor
+				}
+				return "[" + name + "](#" + anchor + ")", nil
+			},
+		},
 
 		// //* Non-Official
 		// // 태그로 묶인 속성을 먼저 처리해야 한다.
 		// {
-		// 	title: "Remove color: unsupported in md",
-		// 	re:    regexp.MustCompile(`(?m)\{color:[^}]+\}(.*?)\{color\}`),
-		// 	repl:  "$1",
-		// }, {
 		// 	title: "Pre-formatted text",
 		// 	re:    regexp.MustCompile(`{noformat}`),
 		// 	repl:  "```",
