@@ -96,6 +96,38 @@ var testCases = []struct {
 		expected:    "\n\n> asdf\n> asdf\n> \n",
 		description: "Multi line blockquote",
 	},
+	{
+		description: "Headings 1",
+		input:       "h1. Headin{*}g 1{*}",
+		expected:    "# Headin**g 1**",
+	},
+
+	// * 여기서부터 공식 문서대로 하나씩 (https://jira.atlassian.com/secure/WikiRendererHelpAction.jspa?section=all)
+	{
+		description: "Headings 1",
+		input:       "h1. Header 1",
+		expected:    "# Header 1",
+	}, {
+		description: "Headings 2",
+		input:       "h2. Header 2",
+		expected:    "## Header 2",
+	}, {
+		description: "Headings 3",
+		input:       "h3. Header 3",
+		expected:    "### Header 3",
+	}, {
+		description: "Headings 4",
+		input:       "h4. Header 4",
+		expected:    "#### Header 4",
+	}, {
+		description: "Headings 5",
+		input:       "h5. Header 5",
+		expected:    "##### Header 5",
+	}, {
+		description: "Headings 6",
+		input:       "h6. Header 6",
+		expected:    "###### Header 6",
+	},
 }
 
 var attachments = AttachmentMap{
