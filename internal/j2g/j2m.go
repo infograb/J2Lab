@@ -19,15 +19,7 @@ type jiration struct {
 func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, []string, error) {
 	usedAttachments := []string{}
 
-	jirations := []jiration{
-
-		{
-			title: "Remove unsupported line breaks",
-			re:    regexp.MustCompile(`(\r\n|\n\r)+`),
-			repl:  "\n\n",
-		},
-
-		//* Code Blocks
+	jirationsForCodeBlocks := []jiration{
 		{
 			title: "Code Block",
 			re:    regexp.MustCompile(`(?m)\{code(?::(.+))?\}\n?((?:.|\s)*?)\n?\{code\}`),
@@ -59,6 +51,14 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, [
 			title: "Noformat Block",
 			re:    regexp.MustCompile(`(?m)\{noformat\}\n?((?:.|\s)*?)\n?\{noformat\}`),
 			repl:  "```\n$1\n```",
+		},
+	}
+
+	jirations := []jiration{
+		{
+			title: "Remove unsupported line breaks",
+			re:    regexp.MustCompile(`(\r\n|\n\r)+`),
+			repl:  "\n\n",
 		},
 
 		//* Text Effects
@@ -310,7 +310,7 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, [
 
 		{
 			title: "table",
-			re:    regexp.MustCompile(`(?m)\|\|(([^|\n\r]+)\|\|)+?(\n\|(([^|\n\r]+?)\|)+)+`),
+			re:    regexp.MustCompile(`(?m)\|\|(([^|\n\r]+)\|\|)+?(\n\n+\|(([^|\n\r]+?)\|)+)+`),
 			repl: func(groups []string) (string, error) {
 				reHeader := regexp.MustCompile(`(?m)^(\|\|(?:[^|\n\r]+?\|\|)+)`)
 				reRows := regexp.MustCompile(`(?m)\n(\|(?:[^|\n\r]+?\|)+)`)
@@ -376,23 +376,52 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, [
 		},
 	}
 
-	for _, jiration := range jirations {
-		// log.Debugf("Substituting '%s'", jiration.title)
+	//* 1. Code Block을 치환한다.
+	str, err := executeJirations(jirationsForCodeBlocks, str)
+	if err != nil {
+		return "", nil, errors.Wrap(err, "JiraToMD")
+	}
+
+	//* 2. Code Block을 보존한다.
+	codeBlocks := []string{}
+	re := regexp.MustCompile("(?m)```" + `(.+?)?\n((?:.|\s)+)?\n` + "```")
+	for _, v := range re.FindAllStringSubmatch(str, -1) {
+		codeBlocks = append(codeBlocks, v[0])
+	}
+
+	str = re.ReplaceAllString(str, "<codeblock>")
+
+	//* 3. 나머지를 치환한다.
+	str, err = executeJirations(jirations, str)
+	if err != nil {
+		return "", nil, errors.Wrap(err, "JiraToMD")
+	}
+
+	//* 4. Code Block을 복원한다.
+	for _, codeBlock := range codeBlocks {
+		str = strings.Replace(str, "<codeblock>", codeBlock, 1)
+	}
+
+	return str, usedAttachments, nil
+}
+
+func executeJirations(jirationsForCodeBlocks []jiration, str string) (string, error) {
+	for _, jiration := range jirationsForCodeBlocks {
 		switch v := jiration.repl.(type) {
 		case string:
 			str = jiration.re.ReplaceAllString(str, v)
 		case func([]string) (string, error):
 			newStr, err := replaceAllStringSubmatchFunc(jiration.re, str, v)
 			if err != nil {
-				return "", nil, errors.Wrap(err, "JiraToMD")
+				return "", errors.Wrap(err, "JiraToMD")
 			} else {
 				str = newStr
 			}
 		default:
-			return "", nil, errors.Errorf("unknown type: %v", v)
+			return "", errors.Errorf("unknown type: %v", v)
 		}
 	}
-	return str, usedAttachments, nil
+	return str, nil
 }
 
 func replaceAllStringSubmatchFunc(re *regexp.Regexp, str string, repl func([]string) (string, error)) (string, error) {
