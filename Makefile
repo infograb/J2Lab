@@ -1,23 +1,23 @@
 
 # Go parameters
-BINARY_NAME=jira2gitlab
+BINARY_NAME=j2lab
 BINARY_UNIX=unix_$(BINARY_NAME)
 
 all: test build
 build:
-			  go build -o $(BINARY_NAME) -v
-				chmod +x $(BINARY_NAME)
+	go build -o $(BINARY_NAME) -v
+	chmod +x $(BINARY_NAME)
 test:
-				go test -v ./...
+	go test -v ./...
 clean:
-			  go clean
-				rm -f $(BINARY_NAME)
-				rm -f $(BINARY_UNIX)
+	go clean
+	rm -f $(BINARY_NAME)
+	rm -f $(BINARY_UNIX)
 run:
-				go clean
-				go build -o $(BINARY_NAME) -v
-				chmod +x $(BINARY_NAME)
-				./$(BINARY_NAME)
+	go clean
+	go build -o $(BINARY_NAME) -v
+	chmod +x $(BINARY_NAME)
+	./$(BINARY_NAME)
 
 # Cross compilation
 # build-linux:
