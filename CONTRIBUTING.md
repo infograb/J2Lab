@@ -8,7 +8,11 @@ We love your input! We want to make contributing to this project as easy and tra
 - Proposing new features
 
 ## Repositories
-This project is primarily maintained on [GitLab](). A mirror of the repository is also available on GitHub for wider visibility.
+This project is primarily maintained on [GitLab](https://gitlab.com/infograb-public/J2Lab). A mirror of the repository is also available on GitHub for wider visibility.
+
+
+### To start developing j2lab
+<!-- TODO 프로젝트 구조, 코드 설명 -->
 
 ## Issue
 There are 4 types of issues (each with their own corresponding label):

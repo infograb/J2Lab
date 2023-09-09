@@ -13,36 +13,39 @@ As of February 2, 2021, Atlassian has ceased selling new server licenses and has
 This YAML file houses the configuration for GitLab and Jira connections, as well as project-related settings. YAML files use a human-readable data serialization standard, making them convenient for configuration files.
 
 #### **Structure**
+  
+1. **jira**
+    - **host**: The URL of your Jira instance
+    - **name**: The name of the Jira project.
+    - **jql**: Jira Query Language expression for issue filtering.
+    - **custom_field**: Custom fields like `story_point` and `epic_start_date`.
 
-1. **gitlab**
+2. **gitlab**
     - **host**: The URL of the GitLab instance you're working with.
-    - **token**: The personal access token to authenticate with GitLab.
-  
-2. **jira**
-    - **host**: The URL of your Jira instance.
-    - **email**: The email account associated with the Jira instance.
-    - **token**: The API token to authenticate with Jira.
-  
-3. **project**
-    - **jira**: Project-specific settings for Jira.
-        - **name**: The name of the Jira project.
-        - **jql**: Jira Query Language expression for issue filtering.
-        - **custom_field**: Custom fields like `story_point` and `epic_start_date`.
-    - **gitlab**: Project-specific settings for GitLab.
-        - **issue**: Path to the GitLab project where issues will be migrated.
-        - **epic**: Path to the GitLab project where epics will be migrated.
-
+    - **issue**: Path to the GitLab project where issues will be migrated.
+    - **epic**: Path to the GitLab project where epics will be migrated.
 ```yaml
 # Example config.yaml
+jira:
+  host: https://jira.sbx.infograb.io
+  name: SSP
+  # jql: id = SSP-1029 OR id = SSP-1 
+  jql: ID = SSP-25
+  custom_field:
+    story_point: customfield_10035
+    epic_start_date: customfield_10015
+    parent_epic: customfield_10110
+
 gitlab:
   host: https://gitlab.com
-  token: private-token
+  issue: infograb/team/devops/toy/gos/poc/jeff
+  epic: infograb/team/devops/toy/gos/poc
 ...
 ```
 
 ### user.csv
 
-This CSV file contains the mapping of Jira accounts to GitLab accounts. CSV files are excellent for tabular data and are widely supported.
+This CSV file contains the mapping of Jira username to GitLab accounts. CSV files are excellent for tabular data and are widely supported.
 
 #### **Columns**
 
@@ -52,19 +55,52 @@ This CSV file contains the mapping of Jira accounts to GitLab accounts. CSV file
 
 ```csv
 # Example user.csv
-Jira Account ID, Jira Display Name, GitLab User ID
-12372034567899abcde,Seonghun Son,1231231234
+Jira User Name,GitLab User ID
+jeff,1341
+Dexter,2155
+kane,334
+admin,115
 ...
 ```
-## Usage
-<!-- TODO -->
-### To start using j2lab
+## Installation
+
+### Homebrew (macOS)
+
 ```
 brew tap infograb/j2lab
 brew install j2lab
 ```
-### To start developing j2lab
-<!-- TODO 프로젝트 구조, 코드 설명 -->
+### Executable Files (For other platforms)
+You can also download the pre-built binaries for your specific platform from the [Releases](https://gitlab.com/infograb-public/J2Lab/-/releases) page.
+<!-- TODO -->
+## Usage
+```bash
+Usage:
+  j2lab [flags]
+  j2lab [command]
+
+Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  config      Modify config files
+  help        Help about any command
+  run         Run the application
+  version     Print the client and server version information
+
+Flags:
+  -c, --config string   config.yaml file
+  -d, --debug           debug mode
+  -h, --help            help for j2lab
+  -u, --user string     user.csv file
+
+Use "j2lab [command] --help" for more information about a command.
+```
+#### example
+```bash
+export GITLAB_TOKEN=your_gitlab_token
+export JIRA_TOKEN=your_jira_token
+j2lab run -c config.yaml -u user.csv
+```
+
 ## Contribution
 If you're interested in contributing, please refer to the [Contributing Guide](./CONTRIBUTING.md) before submitting a pull request.
 ## Support
@@ -72,5 +108,5 @@ For any inquiries or additional questions, please reach out to **InfoGrab** via 
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+This project is licensed under the GNU License - see the [LICENSE](./LICENSE) file for details.
 
