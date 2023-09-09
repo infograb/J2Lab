@@ -36,7 +36,7 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 		return nil, errors.Wrap(err, fmt.Sprintf("Error getting config: issue %s", jiraIssue.Key))
 	}
 
-	pid := cfg.Project.GitLab.Issue
+	pid := cfg.GitLab.Issue
 
 	labels, err := convertJiraToGitLabLabels(gl, pid, jiraIssue, existingLabels, false)
 	if err != nil {
@@ -105,8 +105,8 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 	}
 
 	//* Storypoint -> Weight (if custom field is provided)
-	if cfg.Project.Jira.CustomField.StoryPoint != "" {
-		storyPoint, ok := jiraIssue.Fields.Unknowns[cfg.Project.Jira.CustomField.StoryPoint].(float64)
+	if cfg.Jira.CustomField.StoryPoint != "" {
+		storyPoint, ok := jiraIssue.Fields.Unknowns[cfg.Jira.CustomField.StoryPoint].(float64)
 		if ok {
 			storyPointInt := int(storyPoint)
 			gitlabCreateIssueOptions.Weight = &storyPointInt

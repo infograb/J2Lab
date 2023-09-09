@@ -64,8 +64,8 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 	}
 
 	//* Get Project Information
-	jiraProjectID := cfg.Project.Jira.Name
-	gitlabProjectPath := cfg.Project.GitLab.Issue
+	jiraProjectID := cfg.Jira.Name
+	gitlabProjectPath := cfg.GitLab.Issue
 
 	jiraProject, _, err := jr.Project.Get(context.Background(), jiraProjectID)
 	if err != nil {
@@ -78,7 +78,7 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 	}
 
 	//* Get Jira Issues
-	jiraEpics, jiraIssues, err := GetJiraIssues(jr, jiraProjectID, cfg.Project.Jira.Jql)
+	jiraEpics, jiraIssues, err := GetJiraIssues(jr, jiraProjectID, cfg.Jira.Jql)
 	if err != nil {
 		return errors.Wrap(err, fmt.Sprintf("Error getting Jira issues: %s", jiraProjectID))
 	}
@@ -169,7 +169,7 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 	existingProjectLabels := make(map[string]string)
 
 	gruopLabels, err := gitlabx.Unpaginate[gitlab.GroupLabel](gl, func(opt *gitlab.ListOptions) ([]*gitlab.GroupLabel, *gitlab.Response, error) {
-		return gl.GroupLabels.ListGroupLabels(cfg.Project.GitLab.Epic, &gitlab.ListGroupLabelsOptions{
+		return gl.GroupLabels.ListGroupLabels(cfg.GitLab.Epic, &gitlab.ListGroupLabelsOptions{
 			ListOptions:              *opt,
 			IncludeAncestorGroups:    gitlab.Bool(true),
 			IncludeDescendantGrouops: gitlab.Bool(true),

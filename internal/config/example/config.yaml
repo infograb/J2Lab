@@ -1,23 +1,14 @@
-# Path: internal/config/example/config.yaml
+jira:
+  host: https://jira.sbx.infograb.io
+  name: SSP
+  # jql: id = SSP-1029 OR id = SSP-1 OR id = SSP-2 OR id = SSP-3 OR id = SSP-4 OR id = SSP-1 OR id = SSP-2 OR id = SSP-3 OR id = SSP-4
+  jql: ID = SSP-25
+  custom_field:
+    story_point: customfield_10035
+    epic_start_date: customfield_10015
+    parent_epic: customfield_10110
 
 gitlab:
   host: https://gitlab.com
-  token: Token can be Injected as GITLAB_TOKEN env variable
-
-jira:
-  host: https://jira.sbx.infograb.io
-  email: jeff@infograb.net
-  token: Token can be Injected as JIRA_TOKEN env variable
-
-project:
-  jira:
-    name: SSP
-    # jql: id = SSP-1029 OR id = SSP-1 OR id = SSP-2 OR id = SSP-3 OR id = SSP-4 OR id = SSP-1 OR id = SSP-2 OR id = SSP-3 OR id = SSP-4
-    jql: ID = SSP-25
-    custom_field:
-      story_point: customfield_10035
-      epic_start_date: customfield_10015
-      parent_epic: customfield_10110
-  gitlab:
-    issue: infograb/team/devops/toy/gos/poc/jeff
-    epic: infograb/team/devops/toy/gos/poc
+  issue: infograb/team/devops/toy/gos/poc/jeff
+  epic: infograb/team/devops/toy/gos/poc

@@ -32,36 +32,24 @@ import (
 // 1. Mapping between config file and struct
 // 2. Configuration syntax validation
 
-type GitLab struct {
-	Host  string `yaml:"host" validate:"required,url"`
-	Token string `yaml:"token" validate:"required"`
-}
-
-type Jira struct {
-	Host  string `yaml:"host" validate:"required,url"`
-	Email string `yaml:"email" validate:"required,email"`
-	Token string `yaml:"token" validate:"required"`
-}
-
 type Config struct {
-	GitLab GitLab `yaml:"gitlab" validate:"required"`
-	Jira   Jira   `yaml:"jira" validate:"required"`
-
-	Project struct {
-		Jira struct {
-			Name        string `yaml:"name" validate:"required"`
-			Jql         string `yaml:"jql"`
-			CustomField struct {
-				StoryPoint    string `yaml:"story_point" mapstructure:"story_point"`
-				EpicStartDate string `yaml:"epic_start_date" mapstructure:"epic_start_date"`
-				ParentEpic    string `yaml:"parent_epic" mapstructure:"parent_epic"`
-			} `yaml:"custom_field" mapstructure:"custom_field"`
-		} `yaml:"jira"`
-		GitLab struct {
-			Issue string `yaml:"issue" validate:"required" mapstructure:"issue"`
-			Epic  string `yaml:"epic" validate:"required" mapstructure:"epic"`
-		} `yaml:"gitlab"`
-	} `yaml:"project"`
+	Jira struct {
+		Host        string `yaml:"host" validate:"required,url"`
+		Token       string `yaml:"token" validate:"required"`
+		Name        string `yaml:"name" validate:"required"`
+		Jql         string `yaml:"jql"`
+		CustomField struct {
+			StoryPoint    string `yaml:"story_point" mapstructure:"story_point"`
+			EpicStartDate string `yaml:"epic_start_date" mapstructure:"epic_start_date"`
+			ParentEpic    string `yaml:"parent_epic" mapstructure:"parent_epic"`
+		} `yaml:"custom_field" mapstructure:"custom_field"`
+	} `yaml:"jira"`
+	GitLab struct {
+		Host  string `yaml:"host" validate:"required,url"`
+		Token string `yaml:"token" validate:"required"`
+		Issue string `yaml:"issue" validate:"required" mapstructure:"issue"`
+		Epic  string `yaml:"epic" validate:"required" mapstructure:"epic"`
+	} `yaml:"gitlab"`
 
 	Users map[string]int `yaml:"users" validate:"required" mapstructure:"users"`
 }
@@ -69,9 +57,9 @@ type Config struct {
 var cfg *Config
 
 func capitalizeJiraProject(cfg *Config) {
-	jiraProjectID := cfg.Project.Jira.Name
+	jiraProjectID := cfg.Jira.Name
 	caser := cases.Upper(language.English)
-	cfg.Project.Jira.Name = caser.String(jiraProjectID)
+	cfg.Jira.Name = caser.String(jiraProjectID)
 }
 
 func GetConfig() (*Config, error) {

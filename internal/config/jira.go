@@ -20,16 +20,16 @@ import (
 
 var jiraClient *jira.Client
 
-func GetJiraClient(jiraConfig Jira) *jira.Client {
+func GetJiraClient(cfg *Config) *jira.Client {
 	if jiraClient != nil {
 		return jiraClient
 	}
 
 	tp := jira.BearerAuthTransport{
-		Token: jiraConfig.Token,
+		Token: cfg.Jira.Token,
 	}
 
-	client, err := jira.NewClient(jiraConfig.Host, tp.Client())
+	client, err := jira.NewClient(cfg.Jira.Host, tp.Client())
 	if err != nil {
 		log.Fatalf("Error creating Jira client: %s", err)
 	}

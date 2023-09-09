@@ -38,7 +38,7 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 		return nil, errors.Wrap(err, "Error getting config")
 	}
 
-	gid := cfg.Project.GitLab.Epic
+	gid := cfg.GitLab.Epic
 
 	labels, err := convertJiraToGitLabLabels(gl, gid, jiraIssue, existingLabels, true)
 	if err != nil {
@@ -57,7 +57,7 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 	//! Epic Attachment는 API가 없는 관계로 우회한다.
 	// 1. cfg.Project.GitLab.Issue 프로젝트에 attachement를 붙인다.
 	// 2. 결과 markdown을 절대 경로로 바꾼 후 epic description에 붙인다
-	pid := cfg.Project.GitLab.Issue
+	pid := cfg.GitLab.Issue
 	usedAttachment := make(map[string]bool)
 
 	attachments := make(map[string]*Attachment) // Filename -> Markdown
@@ -79,7 +79,7 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 				alt := matches[1]
 				url := matches[2]
 
-				absUrl := fmt.Sprintf("%s/%s/%s", cfg.GitLab.Host, cfg.Project.GitLab.Issue, url)
+				absUrl := fmt.Sprintf("%s/%s/%s", cfg.GitLab.Host, cfg.GitLab.Issue, url)
 
 				mutex.Lock()
 				attachments[jiraAttachment.Filename] = &Attachment{
@@ -112,8 +112,8 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 	}
 
 	//* StartDate
-	if cfg.Project.Jira.CustomField.EpicStartDate != "" {
-		startDateStr, ok := jiraIssue.Fields.Unknowns[cfg.Project.Jira.CustomField.EpicStartDate].(string)
+	if cfg.Jira.CustomField.EpicStartDate != "" {
+		startDateStr, ok := jiraIssue.Fields.Unknowns[cfg.Jira.CustomField.EpicStartDate].(string)
 		if ok {
 			startDate, err := time.Parse("2006-01-02", startDateStr)
 			if err != nil {
@@ -134,7 +134,7 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 	}
 
 	//* 에픽을 생성합니다.
-	gitlabEpic, _, err := gitlabx.CreateEpic(gl, cfg.Project.GitLab.Epic, &gitlabCreateEpicOptions)
+	gitlabEpic, _, err := gitlabx.CreateEpic(gl, cfg.GitLab.Epic, &gitlabCreateEpicOptions)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error creating GitLab epic")
 	}

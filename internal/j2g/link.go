@@ -65,8 +65,8 @@ func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*JiraEpicLink
 		// Jira는 Epic의 부모 Epic이 없고, GitLab은 Epic이 다른 Epic의 부모가 될 수 있다.
 		parentKey := ""
 
-		if cfg.Project.Jira.CustomField.ParentEpic != "" {
-			if parentEpic, ok := jiraIssue.Fields.Unknowns[cfg.Project.Jira.CustomField.ParentEpic]; ok {
+		if cfg.Jira.CustomField.ParentEpic != "" {
+			if parentEpic, ok := jiraIssue.Fields.Unknowns[cfg.Jira.CustomField.ParentEpic]; ok {
 				if parentEpic != nil {
 					parentKey = parentEpic.(string)
 				}

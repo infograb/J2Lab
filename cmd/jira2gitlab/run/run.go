@@ -59,7 +59,7 @@ func (o *Options) run() error {
 		return errors.Wrap(err, "Error getting config")
 	}
 
-	gl := config.GetGitLabClient(cfg.GitLab)
-	jr := config.GetJiraClient(cfg.Jira)
+	gl := config.GetGitLabClient(cfg)
+	jr := config.GetJiraClient(cfg)
 	return j2g.ConvertByProject(gl, jr)
 }

@@ -54,9 +54,9 @@ func runConfigNewUser(io *utils.IOStreams) error {
 		errors.Wrap(err, "Error unmarshalling config")
 	}
 
-	jr := config.GetJiraClient(cfg.Jira)
+	jr := config.GetJiraClient(cfg)
 
-	jiraEpics, jiraIssues, err := j2g.GetJiraIssues(jr, cfg.Project.Jira.Name, cfg.Project.Jira.Jql)
+	jiraEpics, jiraIssues, err := j2g.GetJiraIssues(jr, cfg.Jira.Name, cfg.Jira.Jql)
 	if err != nil {
 		return errors.Wrap(err, "Error getting Jira issues")
 	}
