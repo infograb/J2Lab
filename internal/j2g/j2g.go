@@ -20,9 +20,9 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/config"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/gitlabx"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/jirax"
+	"gitlab.com/infograb-public/j2lab/internal/config"
+	"gitlab.com/infograb-public/j2lab/internal/gitlabx"
+	"gitlab.com/infograb-public/j2lab/internal/jirax"
 	"golang.org/x/sync/errgroup"
 )
 

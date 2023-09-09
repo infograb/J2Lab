@@ -14,9 +14,9 @@ package run
 import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/config"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/j2g"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/utils"
+	"gitlab.com/infograb-public/j2lab/internal/config"
+	"gitlab.com/infograb-public/j2lab/internal/j2g"
+	"gitlab.com/infograb-public/j2lab/internal/utils"
 )
 
 type Options struct {

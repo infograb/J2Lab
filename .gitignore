@@ -20,7 +20,7 @@
 # Go workspace file
 go.work
 
-/jira2gitlab
+/j2lab
 
 /config.yml
 /config.yaml

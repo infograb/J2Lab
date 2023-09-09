@@ -17,7 +17,7 @@ import (
 
 	jira "github.com/andygrunwald/go-jira/v2/onpremise"
 	"github.com/pkg/errors"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/config"
+	"gitlab.com/infograb-public/j2lab/internal/config"
 )
 
 func textToGitLabMarkdown(text string, userMap UserMap, attachments AttachmentMap, isProject bool) (string, []string, error) {

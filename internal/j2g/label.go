@@ -18,7 +18,7 @@ import (
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/utils"
+	"gitlab.com/infograb-public/j2lab/internal/utils"
 )
 
 func convertJiraToGitLabLabels(gl *gitlab.Client, id interface{}, jiraIssue *jira.Issue, existingLabels map[string]string, isGroup bool) (*gitlab.Labels, error) {

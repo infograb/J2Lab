@@ -13,8 +13,8 @@ package config
 
 import (
 	"github.com/spf13/cobra"
-	newCmd "gitlab.com/infograb/team/devops/toy/j2lab/cmd/jira2gitlab/config/new"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/utils"
+	newCmd "gitlab.com/infograb-public/j2lab/cmd/j2lab/config/new"
+	"gitlab.com/infograb-public/j2lab/internal/utils"
 )
 
 func NewCmdConfig(ioStreams *utils.IOStreams) *cobra.Command {

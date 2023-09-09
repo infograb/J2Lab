@@ -21,10 +21,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/config"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/j2g"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/jirax"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/utils"
+	"gitlab.com/infograb-public/j2lab/internal/config"
+	"gitlab.com/infograb-public/j2lab/internal/j2g"
+	"gitlab.com/infograb-public/j2lab/internal/jirax"
+	"gitlab.com/infograb-public/j2lab/internal/utils"
 )
 
 func NewCmdNewUser(ioStreams *utils.IOStreams) *cobra.Command {

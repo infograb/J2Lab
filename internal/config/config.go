@@ -110,7 +110,7 @@ func GetConfig() (*Config, error) {
 // config file is read by yaml format
 // You can add --config option to specify the config file
 // If you don't specify the config file, the default config file is used
-// - $HOME/.config/jira2gitlab/config.yaml
+// - $HOME/.config/j2lab/config.yaml
 // - $PWD/config.yaml
 
 func InitConfig() error {

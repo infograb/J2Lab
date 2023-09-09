@@ -15,17 +15,17 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	configCmd "gitlab.com/infograb/team/devops/toy/j2lab/cmd/jira2gitlab/config"
-	runCmd "gitlab.com/infograb/team/devops/toy/j2lab/cmd/jira2gitlab/run"
-	"gitlab.com/infograb/team/devops/toy/j2lab/cmd/jira2gitlab/version"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/utils"
+	configCmd "gitlab.com/infograb-public/j2lab/cmd/j2lab/config"
+	runCmd "gitlab.com/infograb-public/j2lab/cmd/j2lab/run"
+	"gitlab.com/infograb-public/j2lab/cmd/j2lab/version"
+	"gitlab.com/infograb-public/j2lab/internal/utils"
 )
 
 var (
 	// Used for flags.
 
 	rootCmd = &cobra.Command{
-		Use:   "jira2gitlab",
+		Use:   "j2lab",
 		Short: "The Jira miration tool for Gitlab",
 		Long:  "This command is the Jira miration tool for Gitlab",
 		Run: func(cmd *cobra.Command, args []string) {

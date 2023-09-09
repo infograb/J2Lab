@@ -5,9 +5,7 @@
 # comment: 'CONFIG' 환경 변수에는 Jira, GitLab 관련 정보가 들어있는 파일의 경로를 지정합니다.
 # comment: 'USER' 환경 변수에는 Jira Account ID, Jira Display Name, GitLab User ID 정보가 있는 파일의 경로를 지정합니다.
 # comment: 정보를 통해 Jira의 프로젝트를 GitLab으로 마이그레이션합니다.
-default:
-  tags:
-    - kane
+
 variables:
   CONFIG_PATH:
     value: "$CI_PROJECT_DIR/config.yaml"
@@ -44,4 +42,4 @@ j2lab:
         exit 1
       fi
   script:
-    - /app/jira2gitlab run -c $CONFIG_PATH -u $USER_PATH
+    - j2lab run -c $CONFIG_PATH -u $USER_PATH

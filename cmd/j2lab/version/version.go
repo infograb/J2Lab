@@ -15,7 +15,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/utils"
+	"gitlab.com/infograb-public/j2lab/internal/utils"
 )
 
 const (

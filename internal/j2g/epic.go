@@ -21,9 +21,9 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	gitlab "github.com/xanzy/go-gitlab"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/config"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/gitlabx"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/utils"
+	"gitlab.com/infograb-public/j2lab/internal/config"
+	"gitlab.com/infograb-public/j2lab/internal/gitlabx"
+	"gitlab.com/infograb-public/j2lab/internal/utils"
 	"golang.org/x/sync/errgroup"
 )
 

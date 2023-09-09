@@ -17,7 +17,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"gitlab.com/infograb/team/devops/toy/j2lab/internal/utils"
+	"gitlab.com/infograb-public/j2lab/internal/utils"
 )
 
 func NewCmdNew(ioStreams *utils.IOStreams) *cobra.Command {

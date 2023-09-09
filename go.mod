@@ -1,4 +1,4 @@
-module gitlab.com/infograb/team/devops/toy/j2lab
+module gitlab.com/infograb-public/j2lab
 
 go 1.20
 
