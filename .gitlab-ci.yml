@@ -1,0 +1,13 @@
+# usage
+## git tag -a v0.1 -m "test relaese"
+stages:
+  - release
+release:
+  stage: release
+  image:
+    name: goreleaser/goreleaser
+    entrypoint: [""]
+  variables:
+    GIT_DEPTH: 0
+  script:
+    - goreleaser release --clean
