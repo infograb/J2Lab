@@ -25,7 +25,7 @@ func convertJiraToGitLabLabels(gl *gitlab.Client, id interface{}, jiraIssue *jir
 
 	//* Component
 	for _, jiraComponent := range jiraIssue.Fields.Components {
-		name := fmt.Sprintf("component::%s", jiraComponent.Name)
+		name := fmt.Sprintf("component:%s", jiraComponent.Name)
 		if _, ok := existingLabels[name]; !ok {
 			_, err := createLabel(gl, id, name, jiraComponent.Description, isGroup)
 			if err != nil {
