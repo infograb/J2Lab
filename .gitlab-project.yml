@@ -1,42 +1,65 @@
 # display_name: J2Lab
 # lang_fw:
 # labels: Go, Jira, Gitlab, Docker
-# comment: 이 job은 Go viper 프로젝트를 사용하여 Jira를 GitLab으로 마이그레이션하는 데 사용됩니다.
-# comment: 'CONFIG' 환경 변수에는 Jira, GitLab 관련 정보가 들어있는 파일의 경로를 지정합니다.
-# comment: 'USER' 환경 변수에는 Jira Account ID, Jira Display Name, GitLab User ID 정보가 있는 파일의 경로를 지정합니다.
-# comment: 정보를 통해 Jira의 프로젝트를 GitLab으로 마이그레이션합니다.
+# comment: 이 job은 j2lab CLI로 Jira 프로젝트를 GitLab 프로젝트로 마이그레이션합니다.
+# comment:
+# comment: 사전에 config.yaml 파일과 user.csv 파일을 구성해야 합니다.
+# comment:
+# comment: - `config.yaml` 환경 변수에는 Jira, GitLab 관련 정보가 들어있는 파일의 경로를 지정합니다.
+# comment: - `user.csv` 환경 변수에는 Jira User Name과 GitLab User ID를 행 단위로 저장한 파일의 경로를 지정합니다.
+# comment:
+# comment: 샘플 파일을 생성하려면 아래 명령을 입력하세요.
+# comment:
+# comment: ``` bash
+# comment: j2lab config new
+# comment: ```
 
 variables:
   CONFIG_PATH:
     value: "$CI_PROJECT_DIR/config.yaml"
-    description: Jira, GitLab 관련 정보가 들어있는 파일입니다.
+    description: |
+      Jira, GitLab 관련 정보가 들어있는 파일의 경로를 지정합니다.
+
+      예시 config.yaml 파일을 생성하려면 아래 명령을 입력하세요.
+
+      ``` bash
+      j2lab config new
+      ```
+  USER_FILE:
+    value: "$CI_PROJECT_DIR/user.csv"
+    description: |
+      Jira User Name과 GitLab User ID를 행 단위로 저장한 파일입니다.
+
+      아래 예시와 같이 저장합니다.
+
+      ``` text
+      Jira User Name, GitLab User ID
+      jeff, 123412
+      ```
   GITLAB_TOKEN: #!
     value: ""
-    description: "이 Job이 GitLab 프로젝트의 API를 호출하기 위한 GitLab Access Token으로, 범위(scope)는 `api`입니다."
+    description: GitLab 프로젝트에 접근하기 위한 엑세스 토큰입니다. 엑세스 토큰을 발급받으려면 [GitLab Docs](https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html#create-a-personal-access-token)를 참조하세요.
   JIRA_TOKEN: #!
     value: ""
-    description: "Jira 프로젝트의 API를 호출하기 위한 Jira Access Token입니다."
-  USER_PATH:
-    value: "$CI_PROJECT_DIR/user.csv"
-    description: Jira Account ID,Jira Display Name,GitLab User ID 정보가 있는 파일입니다.
+    description: Jira 프로젝트에 접근하기 위한 엑세스 토큰입니다. 엑세스 토큰을 발급받으려면 [Jira Docs](https://support.atlassian.com/atlassian-account/docs/manage-api-tokens-for-your-atlassian-account/)를 참조하세요.
 
 j2lab:
   stage: test
   # image: j2lab job을 실행하는 데 필요한 Docker 이미지입니다.
-  # image: TODO: 업로드 위치 정해지면 변경
+  image: gitlab.com/infograb-public/j2lab:latest
   before_script:
-    - | # Ensure that config.yaml exists
+    - |
       if [ ! -f $CONFIG_PATH ]; then  echo -e "
       ======================================================================
-      \\e[1;91mError\\e[0m : config.yaml doesn't exist
+      \\e[1;91mError\\e[0m : config.yaml doesn't exist on $CONFIG_PATH
       ======================================================================
       "
         exit 1
       fi
-    - | # Ensure that user.yaml exists
-      if [ ! -f $USER_PATH ]; then  echo -e "
+    - |
+      if [ ! -f $USER_FILE ]; then  echo -e "
       ======================================================================
-      \\e[1;91mError\\e[0m : user.csv doesn't exist
+      \\e[1;91mError\\e[0m : user.csv doesn't exist on $USER_FILE
       ======================================================================
       "
         exit 1

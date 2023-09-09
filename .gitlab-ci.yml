@@ -1,15 +1,56 @@
 # usage
 ## git tag -a v0.1 -m "test relaese"
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: always
+    - when: never
+
 stages:
   - release
+
 release:
   stage: release
   image:
     name: goreleaser/goreleaser
     entrypoint: [""]
-  only:
-    - tags
   variables:
     GIT_DEPTH: 0
   script:
     - goreleaser release --clean
+
+docker:dind:
+  image: docker:24.0-cli
+  stage: release
+  services:
+    - name: docker:20.10.12-dind
+      command: ["--tls=false", "--host=tcp://0.0.0.0:2375"]
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_BUILDKIT: 1
+    CONTEXT_PATH: $CI_PROJECT_DIR
+    DOCKERFDIR_PATH: $CI_PROJECT_DIR
+    DOCKERFILE_NAME: Dockerfile
+  before_script:
+    - |
+      NOSLASH=$(echo "$CI_COMMIT_REF_NAME" | tr -s / - )
+      SANITIZED=$(echo "$NOSLASH" | tr -cd '[[:alnum:]]._-')
+      export CONTAINER_TAG=$SANITIZED
+      export CONTAINER_REGISTRY_IMAGE_TAG="$CONTAINER_REGISTRY_IMAGE:$CONTAINER_TAG"
+      echo $CONTAINER_REGISTRY_IMAGE_TAG
+    - |
+      mkdir -p ~/.docker
+      echo "{\"auths\":{\"$CI_REGISTRY\":{\"auth\":\"$(echo -n ${CI_REGISTRY_USER}:${CI_REGISTRY_PASSWORD} | base64 | tr -d '\n')\"}}}" \
+        > ~/.docker/config.json
+  script:
+    - |
+      buildctl-daemonless.sh build \
+        --frontend=dockerfile.v0 \
+        --opt filename=$DOCKERFILE_NAME \
+        --local context=$CONTEXT_PATH \
+        --local dockerfile=$DOCKERFDIR_PATH \
+        --output type=image,\"name=$CONTAINER_REGISTRY_IMAGE:latest,$CONTAINER_REGISTRY_IMAGE_TAG\",push=true \
+        $BUILDKIT_ARGS
