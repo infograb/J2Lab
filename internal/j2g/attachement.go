@@ -12,7 +12,9 @@ type AttachmentMap map[string]*Attachment
 
 type Attachment struct {
 	Markdown  string
-	Name      string
+	Filename  string
+	Alt       string
+	URL       string
 	CreatedAt string
 }
 
@@ -33,7 +35,9 @@ func convertJiraAttachmentToMarkdown(gl *gitlab.Client, jr *jira.Client, id inte
 
 	return &Attachment{
 		Markdown:  gitlabUploadedFile.Markdown,
-		Name:      attachement.Filename,
+		Filename:  attachement.Filename,
 		CreatedAt: attachement.Created,
+		Alt:       gitlabUploadedFile.Alt,
+		URL:       gitlabUploadedFile.URL,
 	}, nil
 }

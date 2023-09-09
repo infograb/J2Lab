@@ -133,12 +133,12 @@ var testCases = []struct {
 var attachments = AttachmentMap{
 	"SCR-20230906-oflk.png": &Attachment{
 		Markdown:  "![SCR-20230906-oflk.png](https://jira.infograb.net/secure/attachment/10000/SCR-20230906-oflk.png)",
-		Name:      "SCR-20230906-oflk.png",
+		Filename:  "SCR-20230906-oflk.png",
 		CreatedAt: "2019-09-06T09:00:00+09:00",
 	},
 	"SCR-20230906-ofnz.png": &Attachment{
 		Markdown:  "![SCR-20230906-ofnz.png](https://jira.infograb.net/secure/attachment/10000/SCR-20230906-ofnz.png)",
-		Name:      "SCR-20230906-ofnz.png",
+		Filename:  "SCR-20230906-ofnz.png",
 		CreatedAt: "2019-09-06T09:00:00+09:00",
 	},
 }

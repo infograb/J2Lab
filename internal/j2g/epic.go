@@ -73,8 +73,10 @@ func ConvertJiraIssueToGitLabEpic(gl *gitlab.Client, jr *jira.Client, jiraIssue 
 				mutex.Lock()
 				attachments[jiraAttachment.Filename] = &Attachment{
 					Markdown:  fmt.Sprintf("![%s](%s)", alt, absUrl),
-					Name:      attachment.Name,
+					Filename:  attachment.Filename,
 					CreatedAt: attachment.CreatedAt,
+					Alt:       alt,
+					URL:       absUrl,
 				}
 				mutex.Unlock()
 				log.Debugf("Converted attachment: %s to %s", jiraAttachment.Filename, attachment.Markdown)
