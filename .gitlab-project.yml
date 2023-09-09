@@ -5,7 +5,9 @@
 # comment: 'CONFIG' 환경 변수에는 Jira, GitLab 관련 정보가 들어있는 파일의 경로를 지정합니다.
 # comment: 'USER' 환경 변수에는 Jira Account ID, Jira Display Name, GitLab User ID 정보가 있는 파일의 경로를 지정합니다.
 # comment: 정보를 통해 Jira의 프로젝트를 GitLab으로 마이그레이션합니다.
-
+default:
+  tags:
+    - kane
 variables:
   CONFIG_PATH:
     value: "$CI_PROJECT_DIR/config.yaml"
@@ -17,13 +19,13 @@ variables:
     value: ""
     description: "Jira 프로젝트의 API를 호출하기 위한 Jira Access Token입니다."
   USER_PATH:
-    value: "$CI_PROJECT_DIR/users.csv"
+    value: "$CI_PROJECT_DIR/user.csv"
     description: Jira Account ID,Jira Display Name,GitLab User ID 정보가 있는 파일입니다.
 
 j2lab:
-  stage: migration
+  stage: test
   # image: j2lab job을 실행하는 데 필요한 Docker 이미지입니다.
-  image: registry-gitlab.dev.labs.infograb.io/root/pipeline:latest
+  # image: TODO: 업로드 위치 정해지면 변경
   before_script:
     - | # Ensure that config.yaml exists
       if [ ! -f $CONFIG_PATH ]; then  echo -e "
@@ -42,4 +44,4 @@ j2lab:
         exit 1
       fi
   script:
-    - /app/jira2gitlab run -c $CI_CONFIG_PATH -u $CI_USER_PATH
+    - /app/jira2gitlab run -c $CONFIG_PATH -u $USER_PATH
