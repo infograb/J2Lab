@@ -28,33 +28,33 @@ type jiration struct {
 }
 
 var emojis = map[string]string{
-	`:\)`: ":smile:",
-	`:\(`: ":frowning:",
-	`:P`:  ":stuck_out_tongue:",
-	`:D`:  ":smiley:",
-	`;\)`: ":wink:",
+	`:\)`: "😄",
+	`:\(`: "😦",
+	`:P`:  "😛",
+	`:D`:  "😃",
+	`;\)`: "😉",
 
-	`\(y\)`:   ":thumbsup:",
-	`\(n\)`:   ":thumbsdown:",
-	`\(on\)`:  ":bulb:",
-	`\(off\)`: ":bulb:",
-	`\(!\)`:   ":warning:",
+	`\(y\)`:   "👍",
+	`\(n\)`:   "👎",
+	`\(on\)`:  "💡",
+	`\(off\)`: "💡",
+	`\(!\)`:   "⚠",
 
-	`\(\*\)`:  ":star:",
-	`\(\*r\)`: ":star:",
-	`\(\*g\)`: ":star:",
-	`\(\*b\)`: ":star:",
-	`\(\*y\)`: ":star:",
+	`\(\*\)`:  "⭐",
+	`\(\*r\)`: "⭐",
+	`\(\*g\)`: "⭐",
+	`\(\*b\)`: "⭐",
+	`\(\*y\)`: "⭐",
 
-	`\(/\)`:  ":checkered_flag:",
-	`\(x\)`:  ":x:",
-	`\(i\)`:  ":information_source:",
-	`\(\+\)`: ":heavy_plus_sign:",
-	`\(-\)`:  ":heavy_minus_sign:",
+	`\(/\)`:  "🏁",
+	`\(x\)`:  "❌",
+	`\(i\)`:  "ℹ",
+	`\(\+\)`: "➕",
+	`\(-\)`:  "➖",
 
-	`\(\?\)`: ":question:",
-	"<3":     ":heart:",
-	"</3":    ":broken_heart:",
+	`\(\?\)`: "❓",
+	"<3":     "❤",
+	"</3":    "💔",
 }
 
 func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, []string, error) {
@@ -440,8 +440,8 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, [
 
 	//* 3.2. 이모지 치환
 	for jiraEmoji, gitlabEmoji := range emojis {
-		re = regexp.MustCompile(`(?m)(^| )` + jiraEmoji + `($| )`)
-		str = re.ReplaceAllString(str, "$1"+gitlabEmoji+"$2")
+		str = regexp.MustCompile(`(?m)(^| |[^\w])`+jiraEmoji+`($| |[^\w])`).ReplaceAllString(str, "$1 "+gitlabEmoji+" $2")
+		str = regexp.MustCompile(`(?m)(^| |[^\w])`+jiraEmoji+`($| |[^\w])`).ReplaceAllString(str, "$1 "+gitlabEmoji+" $2")
 	}
 
 	//* 4. Code Block을 복원한다.
