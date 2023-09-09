@@ -16,6 +16,36 @@ type jiration struct {
 	repl  interface{}
 }
 
+var emojis = map[string]string{
+	`:\)`: ":smile:",
+	`:\(`: ":frowning:",
+	`:P`:  ":stuck_out_tongue:",
+	`:D`:  ":smiley:",
+	`;\)`: ":wink:",
+
+	`\(y\)`:   ":thumbsup:",
+	`\(n\)`:   ":thumbsdown:",
+	`\(on\)`:  ":bulb:",
+	`\(off\)`: ":bulb:",
+	`\(!\)`:   ":warning:",
+
+	`\(\*\)`:  ":star:",
+	`\(\*r\)`: ":star:",
+	`\(\*g\)`: ":star:",
+	`\(\*b\)`: ":star:",
+	`\(\*y\)`: ":star:",
+
+	`\(/\)`:  ":checkered_flag:",
+	`\(x\)`:  ":x:",
+	`\(i\)`:  ":information_source:",
+	`\(\+\)`: ":heavy_plus_sign:",
+	`\(-\)`:  ":heavy_minus_sign:",
+
+	`\(\?\)`: ":question:",
+	"<3":     ":heart:",
+	"</3":    ":broken_heart:",
+}
+
 func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, []string, error) {
 	usedAttachments := []string{}
 
@@ -141,8 +171,8 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, [
 			},
 		}, {
 			title: "Color to None",
-			re:    regexp.MustCompile(`(?m)\{color:.+?\}((?:.|\s)*?)\{color\}`),
-			repl:  "$1",
+			re:    regexp.MustCompile(`(?m)\{color:(.+?)\}((?:.|\s)*?)\{color\}`),
+			repl:  "$`\\textcolor{$1}{\\text{$2}}`$ ",
 		},
 
 		//* Text Breaks
@@ -395,6 +425,12 @@ func JiraToMD(str string, attachments AttachmentMap, userMap UserMap) (string, [
 	str, err = executeJirations(jirations, str)
 	if err != nil {
 		return "", nil, errors.Wrap(err, "JiraToMD")
+	}
+
+	//* 3.2. 이모지 치환
+	for jiraEmoji, gitlabEmoji := range emojis {
+		re = regexp.MustCompile(`(?m)(^| )` + jiraEmoji + `($| )`)
+		str = re.ReplaceAllString(str, "$1"+gitlabEmoji+"$2")
 	}
 
 	//* 4. Code Block을 복원한다.
