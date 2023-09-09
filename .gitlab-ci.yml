@@ -1,6 +1,7 @@
+# usage
+## git tag -a v0.1 -m "test relaese"
 stages:
   - release
-
 release:
   stage: release
   image:
