@@ -60,7 +60,9 @@ func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*JiraEpicLink
 					parentKey = parentEpic.(string)
 				}
 			}
-		} else if jiraIssue.Fields.Parent != nil {
+		}
+
+		if jiraIssue.Fields.Parent != nil {
 			parentKey = jiraIssue.Fields.Parent.Key
 		}
 
