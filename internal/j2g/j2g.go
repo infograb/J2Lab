@@ -119,11 +119,14 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 		return errors.Wrap(err, "Error getting GitLab milestones from GitLab: %s")
 	}
 
+	milestones := make(map[string]*Milestone)
 	for _, version := range jiraProject.Versions {
+		jiraVersion := version
 		exist := false
-		for _, milestone := range existingMilestones {
-			if milestone.Title == version.Name {
+		for _, gitlabMilesone := range existingMilestones {
+			if gitlabMilesone.Title == version.Name {
 				log.Infof("Milestone already exists: %s", version.Name)
+				milestones[version.Name] = &Milestone{gitlabMilesone, &jiraVersion}
 				exist = true
 				break
 			}
@@ -132,10 +135,14 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 		if !exist {
 			g.Go(func(version jira.Version) func() error {
 				return func() error {
-					_, err := createMilestoneFromJiraVersion(jr, gl, gitlabProject.ID, &version)
+					milestone, err := createMilestoneFromJiraVersion(jr, gl, gitlabProject.ID, &version)
 					if err != nil {
 						return errors.Wrap(err, "Error creating GitLab milestone")
 					}
+
+					mutex.Lock()
+					milestones[version.Name] = milestone
+					mutex.Unlock()
 					return nil
 				}
 			}(version))
@@ -213,7 +220,7 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 		g.Go(func(jiraIssue *jira.Issue) func() error {
 			return func() error {
 				log.Infof("Converting issue: %s", jiraIssue.Key)
-				gitlabIssue, err := ConvertJiraIssueToGitLabIssue(gl, jr, jiraIssue, userMap, existingProjectLabels)
+				gitlabIssue, err := ConvertJiraIssueToGitLabIssue(gl, jr, jiraIssue, userMap, existingProjectLabels, milestones)
 				if err != nil {
 					return errors.Wrap(err, fmt.Sprintf("Error converting issue: %s", jiraIssue.Key))
 				}
@@ -235,6 +242,18 @@ func ConvertByProject(gl *gitlab.Client, jr *jira.Client) error {
 	err = Link(gl, jr, epicLinks, issueLinks)
 	if err != nil {
 		return errors.Wrap(err, "Error linking")
+	}
+
+	//* Close Milestone
+	for _, milestone := range milestones {
+		if *milestone.JiraVersion.Archived || *milestone.JiraVersion.Released {
+			_, _, err := gl.Milestones.UpdateMilestone(gitlabProject.ID, milestone.ID, &gitlab.UpdateMilestoneOptions{
+				StateEvent: gitlab.String("close"),
+			})
+			if err != nil {
+				return errors.Wrap(err, fmt.Sprintf("Error closing milestone: %s", milestone.JiraVersion.Name))
+			}
+		}
 	}
 
 	log.Infof("You are successfully migrated %s to %s", jiraProjectID, gitlabProjectPath)

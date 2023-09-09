@@ -14,7 +14,7 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue *jira.Issue, userMap UserMap, existingLabels map[string]string) (*gitlab.Issue, error) {
+func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue *jira.Issue, userMap UserMap, existingLabels map[string]string, existingMilestone map[string]*Milestone) (*gitlab.Issue, error) {
 	log := logrus.WithField("jiraIssue", jiraIssue.Key)
 	var g errgroup.Group
 	g.SetLimit(5)
@@ -85,12 +85,9 @@ func ConvertJiraIssueToGitLabIssue(gl *gitlab.Client, jr *jira.Client, jiraIssue
 
 	//* Version -> Milestone
 	if len(jiraIssue.Fields.FixVersions) > 0 {
-		milestone, err := createOrRetrieveMiletone(gl, pid, gitlab.CreateMilestoneOptions{
-			Title: &jiraIssue.Fields.FixVersions[0].Name,
-		}, false)
-
-		if err != nil {
-			return nil, errors.Wrap(err, fmt.Sprintf("Error creating GitLab milestone: issue %s", jiraIssue.Key))
+		milestone, ok := existingMilestone[jiraIssue.Fields.FixVersions[0].Name]
+		if !ok {
+			return nil, errors.New(fmt.Sprintf("Error Getting Milestone %s on issue %s", jiraIssue.Fields.FixVersions[0].Name, jiraIssue.Key))
 		}
 
 		gitlabCreateIssueOptions.MilestoneID = &milestone.ID

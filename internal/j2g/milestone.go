@@ -9,36 +9,12 @@ import (
 	gitlab "github.com/xanzy/go-gitlab"
 )
 
-func createOrRetrieveMiletone(gl *gitlab.Client, pid interface{}, option gitlab.CreateMilestoneOptions, closed bool) (*gitlab.Milestone, error) {
-	milestones, _, err := gl.Milestones.ListMilestones(pid, &gitlab.ListMilestonesOptions{
-		Title: option.Title,
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "Error getting milestone")
-	}
-
-	if len(milestones) > 0 {
-		return milestones[0], nil
-	}
-
-	milestone, _, err := gl.Milestones.CreateMilestone(pid, &option)
-	if err != nil {
-		return nil, errors.Wrap(err, "Error creating milestone")
-	}
-
-	if closed {
-		_, _, err := gl.Milestones.UpdateMilestone(pid, milestone.ID, &gitlab.UpdateMilestoneOptions{
-			StateEvent: gitlab.String("close"),
-		})
-		if err != nil {
-			return nil, errors.Wrap(err, "Error closing milestone")
-		}
-	}
-
-	return milestone, nil
+type Milestone struct {
+	*gitlab.Milestone
+	JiraVersion *jira.Version
 }
 
-func createMilestoneFromJiraVersion(jr *jira.Client, gl *gitlab.Client, pid interface{}, jiraVersion *jira.Version) (*gitlab.Milestone, error) {
+func createMilestoneFromJiraVersion(jr *jira.Client, gl *gitlab.Client, pid interface{}, jiraVersion *jira.Version) (*Milestone, error) {
 	log.Infof("Creating milestone: %s", jiraVersion.Name)
 
 	var startDate time.Time
@@ -65,10 +41,14 @@ func createMilestoneFromJiraVersion(jr *jira.Client, gl *gitlab.Client, pid inte
 		StartDate:   (*gitlab.ISOTime)(&startDate),
 		DueDate:     (*gitlab.ISOTime)(&releaseDate),
 	}
-	milstone, err := createOrRetrieveMiletone(gl, pid, option, *jiraVersion.Archived || *jiraVersion.Released)
+
+	milestone, _, err := gl.Milestones.CreateMilestone(pid, &option)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error creating milestone")
 	}
 
-	return milstone, nil
+	return &Milestone{
+		Milestone:   milestone,
+		JiraVersion: jiraVersion,
+	}, nil
 }

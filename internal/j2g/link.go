@@ -77,7 +77,7 @@ func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*JiraEpicLink
 						if err != nil {
 							return errors.Wrap(err, fmt.Sprintf("Error linking GitLab issue %s with its parent epic %s", jiraIssue.Key, parentKey))
 						}
-						log.Infof("Linked issue %s to parent epic %s", jiraIssue.Key, parentKey)
+						log.Infof("Linked issue %s(%d) to parent epic %s(%d)", jiraIssue.Key, jiraIssue.gitlabIssue.IID, parentKey, parentEpicLink.gitlabEpic.IID)
 					}
 
 					//* If this Issue has a parent Issue (Subtask)
@@ -92,7 +92,7 @@ func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*JiraEpicLink
 						if err != nil {
 							return errors.Wrap(err, fmt.Sprintf("Error linking GitLab issue %s with its parent issue %s", jiraIssue.Key, parentKey))
 						}
-						log.Infof("Linked issue %s to parent issue %s", jiraIssue.Key, parentKey)
+						log.Infof("Linked issue %s(%d) to parent issue %s(%d)", jiraIssue.Key, jiraIssue.gitlabIssue.IID, parentKey, parentIssueLink.gitlabIssue.IID)
 					}
 					return nil
 				}
@@ -135,7 +135,7 @@ func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*JiraEpicLink
 									return errors.Wrap(err, fmt.Sprintf("Error Creating Issue link from %s to %s", jiraIssue.Key, outwardIssue.Key))
 								}
 
-								log.Infof("Linked issue %s to %s with link type %s", jiraIssue.Key, outwardIssue.Key, outwardType)
+								log.Infof("Linked issue %s(%d) to %s(%d) with link type %s", jiraIssue.Key, jiraIssue.gitlabIssue.IID, outwardIssue.Key, issueLinks[outwardIssue.Key].gitlabIssue.IID, outwardType)
 								return nil
 							}
 						}(jiraIssue))
@@ -182,7 +182,7 @@ func Link(gl *gitlab.Client, jr *jira.Client, epicLinks map[string]*JiraEpicLink
 										return errors.Wrap(err, "Error creating GitLab epic link")
 									}
 
-									log.Infof("Linked epic %s to %s with link type %s", jiraIssue.Key, outwardIssue.Key, outwardType)
+									log.Infof("Linked epic %s(%d) to %s(%d) with link type %s", jiraIssue.Key, jiraIssue.gitlabEpic.IID, outwardIssue.Key, epicLinks[outwardIssue.Key].gitlabEpic.IID, outwardType)
 									return nil
 								}
 							}(jiraIssue))
