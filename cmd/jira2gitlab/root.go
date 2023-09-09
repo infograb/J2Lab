@@ -40,7 +40,7 @@ func init() {
 	rootCmd.PersistentFlags().StringP("user", "u", "", "user.csv file")
 	rootCmd.PersistentFlags().BoolP("debug", "d", false, "debug mode")
 	viper.BindPFlag("CONFIG_FILE", rootCmd.PersistentFlags().Lookup("config"))
-	viper.BindPFlag("CONFIG_USER_FILE", rootCmd.PersistentFlags().Lookup("user"))
+	viper.BindPFlag("USER_FILE", rootCmd.PersistentFlags().Lookup("user"))
 	viper.BindPFlag("DEBUG", rootCmd.PersistentFlags().Lookup("debug"))
 
 	ioStreams := utils.NewStdIOStreams()

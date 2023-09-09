@@ -162,7 +162,7 @@ func parseUserCSVs() (map[string]int, error) {
 
 	var file *os.File
 
-	path := viper.GetString("CONFIG_USER_FILE")
+	path := viper.GetString("USER_FILE")
 	if path == "" {
 		path = filepath.Join(pwd, "user.csv")
 		file, err = os.Open(path)
