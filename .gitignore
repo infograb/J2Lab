@@ -27,5 +27,6 @@ go.work
 *.env
 
 /users.csv
+/user.csv
 
 __debug_bin*

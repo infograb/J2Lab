@@ -30,8 +30,8 @@ import (
 func NewCmdNewUser(ioStreams *utils.IOStreams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "user",
-		Short:   "List the Jira User Account Id to users.csv file",
-		Long:    "List the Jira User Account Id to users.csv file",
+		Short:   "List the Jira User Account Id to user.csv file",
+		Long:    "List the Jira User Account Id to user.csv file",
 		Example: "",
 		Run: func(cmd *cobra.Command, args []string) {
 			utils.CheckErr(runConfigNewUser(ioStreams))
@@ -68,23 +68,23 @@ func runConfigNewUser(io *utils.IOStreams) error {
 
 	//* Check if the file already exists
 	fileExists := false
-	if _, err := os.Stat("users.csv"); err == nil {
+	if _, err := os.Stat("user.csv"); err == nil {
 		fileExists = true
 	}
 
 	//* Ask for confirmation to overwrite the file if it already exists
 	if fileExists {
-		fmt.Print("The 'users.csv' file already exists. Do you want to overwrite it? (y/n): ")
+		fmt.Print("The 'user.csv' file already exists. Do you want to overwrite it? (y/n): ")
 		scanner := bufio.NewScanner(os.Stdin)
 		scanner.Scan()
 		answer := strings.ToLower(scanner.Text())
 		if answer != "y" {
-			logrus.Debugf("Exiting without overwriting the 'users.csv' file")
+			logrus.Debugf("Exiting without overwriting the 'user.csv' file")
 			return nil
 		}
 	}
 
-	file, err := os.Create("users.csv")
+	file, err := os.Create("user.csv")
 	if err != nil {
 		return errors.Wrap(err, "Error creating file")
 	}
