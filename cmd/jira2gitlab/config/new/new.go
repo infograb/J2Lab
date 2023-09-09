@@ -12,8 +12,8 @@ import (
 func NewCmdNew(ioStreams *utils.IOStreams) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "new",
-		Short:   "Create the config.yaml and users.csv file",
-		Long:    "Create the config.yaml and users.csv file on the current working directory",
+		Short:   "Create the config.yaml and user.csv file",
+		Long:    "Create the config.yaml and user.csv file on the current working directory",
 		Example: "",
 		Run: func(cmd *cobra.Command, args []string) {
 			utils.CheckErr(runConfigNew(ioStreams))
@@ -45,8 +45,8 @@ func runConfigNew(io *utils.IOStreams) error {
 		return errors.Wrap(err, "error copying file")
 	}
 
-	srcPath, _ = filepath.Abs("./internal/config/example/users.csv")
-	destPath = filepath.Join(pwd, "users.csv")
+	srcPath, _ = filepath.Abs("./internal/config/example/user.csv")
+	destPath = filepath.Join(pwd, "user.csv")
 	err = utils.CopyFile(io.Out, srcPath, destPath)
 	if err != nil {
 		return errors.Wrap(err, "error copying file")

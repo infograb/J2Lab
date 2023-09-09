@@ -95,7 +95,7 @@ func GetConfig() (*Config, error) {
 
 	cfg.Users, err = parseUserCSVs()
 	if err != nil {
-		return nil, errors.Wrap(err, "Error parsing users.csv")
+		return nil, errors.Wrap(err, "Error parsing user.csv")
 	}
 
 	capitalizeJiraProject(cfg)
@@ -127,7 +127,7 @@ func InitConfig() error {
 
 	viper.AutomaticEnv()
 
-	if configFile := viper.GetString("config"); configFile != "" {
+	if configFile := viper.GetString("CONFIG_FILE"); configFile != "" {
 		viper.SetConfigFile(configFile)
 	}
 
@@ -149,9 +149,25 @@ func parseUserCSVs() (map[string]int, error) {
 		return nil, errors.Wrap(err, "Error getting home directory")
 	}
 
-	file, err := os.Open(filepath.Join(pwd, "users.csv"))
-	if err != nil {
-		return nil, errors.Wrap(err, "Error opening users file")
+	var file *os.File
+
+	path := viper.GetString("CONFIG_USER_FILE")
+	if path == "" {
+		path = filepath.Join(pwd, "user.csv")
+		file, err = os.Open(path)
+		if err != nil {
+			return nil, errors.Wrap(err, "Error opening file")
+		}
+	} else {
+		path, err = filepath.Abs(path)
+		if err != nil {
+			return nil, errors.Wrap(err, "Error getting absolute path")
+		}
+
+		file, err = os.Open(path)
+		if err != nil {
+			return nil, errors.Wrap(err, "Error opening file")
+		}
 	}
 	defer file.Close()
 
@@ -169,7 +185,7 @@ func parseUserCSVs() (map[string]int, error) {
 
 			gitlabUserId, err := strconv.Atoi(valueStr)
 			if err != nil {
-				log.Fatal("Error parsing user ID: users.csv must be in the format of <Jira Account ID>,<Jira Display Name>,<GitLab User ID>")
+				log.Fatal("Error parsing user ID: user.csv must be in the format of <Jira Account ID>,<Jira Display Name>,<GitLab User ID>")
 			}
 
 			users[username] = gitlabUserId

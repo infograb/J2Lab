@@ -17,7 +17,7 @@ variables:
     value: ""
     description: "Jira 프로젝트의 API를 호출하기 위한 Jira Access Token입니다."
   USER_PATH:
-    value: "$CI_PROJECT_DIR/users.csv"
+    value: "$CI_PROJECT_DIR/user.csv"
     description: Jira Account ID,Jira Display Name,GitLab User ID 정보가 있는 파일입니다.
 
 j2lab:
