@@ -17,15 +17,29 @@ variables:
     value: ""
     description: "Jira 프로젝트의 API를 호출하기 위한 Jira Access Token입니다."
   USER_PATH:
-    value: "$CI_PROJECT_DIR/user.csv"
+    value: "$CI_PROJECT_DIR/users.csv"
     description: Jira Account ID,Jira Display Name,GitLab User ID 정보가 있는 파일입니다.
 
 j2lab:
-  stage: test
+  stage: migration
   # image: j2lab job을 실행하는 데 필요한 Docker 이미지입니다.
-  image: registry.gitlab.com/infograb/team/devops/toy/gos/j2lab:latest
+  image: registry-gitlab.dev.labs.infograb.io/root/pipeline:latest
   before_script:
-    - cp $CONFIG_PATH /app/config.yaml
-    - cp $USER_PATH /app/user.csv
+    - | # Ensure that config.yaml exists
+      if [ ! -f $CONFIG_PATH ]; then  echo -e "
+      ======================================================================
+      \\e[1;91mError\\e[0m : config.yaml doesn't exist
+      ======================================================================
+      "
+        exit 1
+      fi
+    - | # Ensure that user.yaml exists
+      if [ ! -f $USER_PATH ]; then  echo -e "
+      ======================================================================
+      \\e[1;91mError\\e[0m : user.csv doesn't exist
+      ======================================================================
+      "
+        exit 1
+      fi
   script:
-    - /app/jira2gitlab run
+    - /app/jira2gitlab run -c $CI_CONFIG_PATH -u $CI_USER_PATH
