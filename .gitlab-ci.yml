@@ -41,16 +41,10 @@ docker:dind:
       export CONTAINER_TAG=$SANITIZED
       export CONTAINER_REGISTRY_IMAGE_TAG="$CONTAINER_REGISTRY_IMAGE:$CONTAINER_TAG"
       echo $CONTAINER_REGISTRY_IMAGE_TAG
-    - |
-      mkdir -p ~/.docker
-      echo "{\"auths\":{\"$CI_REGISTRY\":{\"auth\":\"$(echo -n ${CI_REGISTRY_USER}:${CI_REGISTRY_PASSWORD} | base64 | tr -d '\n')\"}}}" \
-        > ~/.docker/config.json
   script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
     - |
-      buildctl-daemonless.sh build \
-        --frontend=dockerfile.v0 \
-        --opt filename=$DOCKERFILE_NAME \
-        --local context=$CONTEXT_PATH \
-        --local dockerfile=$DOCKERFDIR_PATH \
-        --output type=image,\"name=$CONTAINER_REGISTRY_IMAGE:latest,$CONTAINER_REGISTRY_IMAGE_TAG\",push=true \
-        $BUILDKIT_ARGS
+      docker build \
+        -t $CONTAINER_REGISTRY_IMAGE_TAG \
+        -t $CONTAINER_REGISTRY_IMAGE:latest .
+    - docker push $CONTAINER_REGISTRY_IMAGE_TAG
